@@ -1,0 +1,11 @@
+[package]
+name = "pilot-link-rs"
+version = "0.1.0"
+authors = ["andymememe <andymememe@gmail.com>"]
+edition = "2018"
+
+[lib]
+name = "pilot_link"
+path = "src/lib.rs"
+
+[dependencies]
