@@ -101,3 +101,11 @@ pub fn pack_category_app_info(ai: &CategoryAppInfo, record: &mut Vec<u8>, len: u
     // Return Record Length
     record_offset
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_add() {}
+}

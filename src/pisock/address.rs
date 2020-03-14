@@ -4,13 +4,13 @@ use super::{get_buf_string, get_long, get_short, set_long, set_short};
 
 use std::str;
 
-struct Address {
+pub struct Address {
     phone_label: [u64; 5],
     show_phone: u64,
     entry: [String; 19],
 }
 
-struct AddressAppInfo {
+pub struct AddressAppInfo {
     address_type: AddressType,
     category: CategoryAppInfo,
     labels: [String; 16],
@@ -20,11 +20,12 @@ struct AddressAppInfo {
     sort_by_company: u8,
 }
 
-enum AddressType {
+pub enum AddressType {
     AddressV1,
+    Unknown,
 }
 
-enum AddressField {
+pub enum AddressField {
     EntryLastname,
     EntryFirstname,
     EntryCompany,
@@ -57,16 +58,16 @@ fn lo(x: u8) -> u8 {
     x & 0x0f
 }
 
-// Pair X and Y
-fn pair(x: u8, y: u8) -> u8 {
-    (x << 4) | y
-}
-
-fn unpack_address(addr: &mut Address, buf: &Vec<u8>, addrType: AddressType) -> i32 {
+pub fn unpack_address(addr: &mut Address, buf: &Vec<u8>, addr_type: AddressType) -> i32 {
     let contents: u64;
     let mut offset: usize;
 
-    if buf.is_empty() && buf.len() < 9 {
+    match addr_type {
+        AddressType::AddressV1 => {}
+        _ => return -1,
+    }
+
+    if buf.len() < 9 {
         return -1;
     }
 
@@ -99,13 +100,18 @@ fn unpack_address(addr: &mut Address, buf: &Vec<u8>, addrType: AddressType) -> i
     0
 }
 
-fn pack_address(addr: &Address, buf: &mut Vec<u8>, addrType: AddressType) -> i32 {
+pub fn pack_address(addr: &Address, buf: &mut Vec<u8>, addr_type: AddressType) -> i32 {
     let mut phone_flag: u64;
     let mut contents: u64;
     let mut destlen: usize = 9;
     let mut buffer_offset: usize;
     let mut offset: usize;
     let mut l: usize;
+
+    match addr_type {
+        AddressType::AddressV1 => {}
+        _ => return -1,
+    }
 
     // Pack Contents
     for v in 0..19 {
@@ -115,7 +121,6 @@ fn pack_address(addr: &Address, buf: &mut Vec<u8>, addrType: AddressType) -> i32
     }
     pi_buffer_expect(buf, destlen);
     buffer_offset = 9;
-    phone_flag = 0;
     contents = 0;
     offset = 0;
     for v in 0..19 {
@@ -145,7 +150,7 @@ fn pack_address(addr: &Address, buf: &mut Vec<u8>, addrType: AddressType) -> i32
     0
 }
 
-fn unpack_address_app_info(aai: &mut AddressAppInfo, record: &Vec<u8>, len: usize) -> usize {
+pub fn unpack_address_app_info(aai: &mut AddressAppInfo, record: &Vec<u8>, len: usize) -> usize {
     let r: u64;
     let i: usize;
     let destlen: usize = 4 + 16 * 22 + 2 + 2;
@@ -203,11 +208,10 @@ fn unpack_address_app_info(aai: &mut AddressAppInfo, record: &Vec<u8>, len: usiz
     record_offset
 }
 
-fn pack_address_app_info(aai: &AddressAppInfo, record: &mut Vec<u8>, len: usize) -> usize {
+pub fn pack_address_app_info(aai: &AddressAppInfo, record: &mut Vec<u8>, len: usize) -> usize {
     let i: usize;
     let destlen: usize = 4 + 16 * 22 + 2 + 2;
     let mut r: u64;
-    let mut len_offset = len;
     let mut record_offset: usize = 0;
 
     // Pack Category App Info
@@ -219,7 +223,6 @@ fn pack_address_app_info(aai: &AddressAppInfo, record: &mut Vec<u8>, len: usize)
         return i;
     }
     record_offset += i;
-    len_offset -= i;
 
     // Padding Zero
     for i in record_offset..record_offset + destlen {
@@ -260,4 +263,12 @@ fn pack_address_app_info(aai: &AddressAppInfo, record: &mut Vec<u8>, len: usize)
 
     // Return Record Length
     record_offset
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_add() {}
 }

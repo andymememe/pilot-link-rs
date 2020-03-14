@@ -1,2 +1,2 @@
-mod pisock;
-mod pisync;
+pub mod pisock;
+pub mod pisync;
