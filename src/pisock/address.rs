@@ -1,5 +1,4 @@
 use super::appinfo::{pack_category_app_info, unpack_category_app_info, CategoryAppInfo};
-use super::buffer::pi_buffer_expect;
 use super::{get_buf_string, get_long, get_short, set_long, set_short};
 
 use std::str;
@@ -58,13 +57,26 @@ fn lo(x: u8) -> u8 {
     x & 0x0f
 }
 
-pub fn unpack_address(addr: &mut Address, buf: &Vec<u8>, addr_type: AddressType) -> i32 {
+pub fn unpack_address(
+    addr_option: Option<&mut Address>,
+    buf_option: Option<&Vec<u8>>,
+    addr_type: AddressType,
+) -> i32 {
     let contents: u64;
+    let buf: &Vec<u8>;
+    let addr: &mut Address;
     let mut offset: usize;
+
+    addr = addr_option.unwrap();
 
     match addr_type {
         AddressType::AddressV1 => {}
         _ => return -1,
+    }
+
+    match buf_option {
+        Some(x) => buf = x,
+        None => return -1,
     }
 
     if buf.len() < 9 {
@@ -100,17 +112,32 @@ pub fn unpack_address(addr: &mut Address, buf: &Vec<u8>, addr_type: AddressType)
     0
 }
 
-pub fn pack_address(addr: &Address, buf: &mut Vec<u8>, addr_type: AddressType) -> i32 {
+pub fn pack_address(
+    addr_option: Option<&Address>,
+    buf_option: &mut Option<Vec<u8>>,
+    addr_type: AddressType,
+) -> i32 {
+    let addr: &Address;
+    let buf: &mut Vec<u8>;
     let mut phone_flag: u64;
     let mut contents: u64;
     let mut destlen: usize = 9;
     let mut buffer_offset: usize;
     let mut offset: usize;
-    let mut l: usize;
 
     match addr_type {
         AddressType::AddressV1 => {}
         _ => return -1,
+    }
+
+    match addr_option {
+        Some(x) => addr = x,
+        None => return -1,
+    }
+
+    match buf_option {
+        Some(x) => buf = x,
+        None => return -1,
     }
 
     // Pack Contents
@@ -119,7 +146,7 @@ pub fn pack_address(addr: &Address, buf: &mut Vec<u8>, addr_type: AddressType) -
             destlen += addr.entry[v].len() + 1
         }
     }
-    pi_buffer_expect(buf, destlen);
+    buf.resize(buf.len() + destlen, 0);
     buffer_offset = 9;
     contents = 0;
     offset = 0;
@@ -129,8 +156,10 @@ pub fn pack_address(addr: &Address, buf: &mut Vec<u8>, addr_type: AddressType) -
                 offset = buffer_offset - 8;
             }
             contents |= 1 << v;
-            l = addr.entry[v].len() + 1;
-            buffer_offset += l;
+            for ele in addr.entry[v].as_bytes() {
+                buf[buffer_offset] = *ele;
+                buffer_offset += 1;
+            }
         }
     }
 
@@ -150,21 +179,31 @@ pub fn pack_address(addr: &Address, buf: &mut Vec<u8>, addr_type: AddressType) -
     0
 }
 
-pub fn unpack_address_app_info(aai: &mut AddressAppInfo, record: &Vec<u8>, len: usize) -> usize {
+pub fn unpack_address_app_info(
+    aai_option: Option<&mut AddressAppInfo>,
+    record_option: Option<&Vec<u8>>,
+    len: usize,
+) -> usize {
+    let record: &Vec<u8>;
+    let aai: &mut AddressAppInfo;
     let r: u64;
     let i: usize;
     let destlen: usize = 4 + 16 * 22 + 2 + 2;
     let mut record_offset: usize = 0;
     let mut len_offset = len;
 
+    aai = aai_option.unwrap();
+
     // Unpack Address Type
     aai.address_type = AddressType::AddressV1;
 
     // Unpack Category App Info
-    i = unpack_category_app_info(&mut aai.category, record, len);
-    if record.len() == 0 {
-        return i + destlen;
+    i = unpack_category_app_info(&mut aai.category, record_option, len);
+    match record_option {
+        Some(x) => record = x,
+        None => return i + destlen,
     }
+
     if i == 0 {
         return i;
     }
@@ -208,7 +247,11 @@ pub fn unpack_address_app_info(aai: &mut AddressAppInfo, record: &Vec<u8>, len: 
     record_offset
 }
 
-pub fn pack_address_app_info(aai: &AddressAppInfo, record: &mut Vec<u8>, len: usize) -> usize {
+pub fn pack_address_app_info(
+    aai: &AddressAppInfo,
+    record: Option<&mut Vec<u8>>,
+    len: usize,
+) -> usize {
     let i: usize;
     let destlen: usize = 4 + 16 * 22 + 2 + 2;
     let mut r: u64;
@@ -216,9 +259,6 @@ pub fn pack_address_app_info(aai: &AddressAppInfo, record: &mut Vec<u8>, len: us
 
     // Pack Category App Info
     i = pack_category_app_info(&aai.category, record, len);
-    if record.len() == 0 {
-        return destlen + i;
-    }
     if i == 0 {
         return i;
     }

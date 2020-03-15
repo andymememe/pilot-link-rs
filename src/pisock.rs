@@ -1,6 +1,5 @@
 pub mod address;
 pub mod appinfo;
-pub mod buffer;
 
 use std::str;
 
