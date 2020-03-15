@@ -1,7 +1,7 @@
 use super::{get_short, set_short};
 use std::str;
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, PartialEq)]
 pub struct CategoryAppInfo {
     pub renamed: [u64; 16],
     pub name: [String; 16],

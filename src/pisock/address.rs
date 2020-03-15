@@ -2,16 +2,15 @@ use super::appinfo::{pack_category_app_info, unpack_category_app_info, CategoryA
 use super::{get_buf_string, get_long, get_short, set_long, set_short, reset_block, check_block};
 
 use std::str;
-use std::time::{SystemTime, UNIX_EPOCH};
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, PartialEq)]
 pub struct Address {
     pub phone_label: [u64; 5],
     pub show_phone: u64,
     pub entry: [String; 19],
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, PartialEq)]
 pub struct AddressAppInfo {
     pub address_type: AddressType,
     pub category: CategoryAppInfo,
@@ -22,7 +21,7 @@ pub struct AddressAppInfo {
     pub sort_by_company: u8,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum AddressType {
     AddressV1,
     Unknown,
@@ -306,6 +305,7 @@ pub fn pack_address_app_info(
 #[cfg(test)]
 mod test {
     use super::*;
+    use std::time::{SystemTime, UNIX_EPOCH};
 
     fn get_address_app_block() -> Vec<u8> {
         String::from("\
@@ -449,42 +449,7 @@ mod test {
 
         let l = unpack_address_app_info(mai, address_app_block, address_app_block.len());
         assert_eq!(l, address_app_block.len());
-
-        let category_names = vec![
-            String::from("Unfiled"),
-            String::from("Business"),
-            String::from("Personal"),
-            String::from("QuickList"),
-            String::from("Foo"),
-        ];
-
-        for i in 0..16 {
-            if i < category_names.len() {
-                assert_eq!(mai.category.name[i], category_names[i])
-            } else {
-                assert_eq!(mai.category.name[i], String::from(""))
-            }
-        }
-
-        let not_renamed = vec![4];
-        for i in 0..16 {
-            if not_renamed.contains(&i) {
-                assert_ne!(mai.category.renamed[i], 0);
-            } else {
-                assert_eq!(mai.category.renamed[i], 0);
-            }
-        }
-
-        let ids = vec![0, 1, 2, 3, 17];
-        for i in 0..16 {
-            if i < ids.len() {
-                assert_eq!(mai.category.id[i], ids[i]);
-            } else {
-                assert_eq!(mai.category.id[i], 0);
-            }
-        }
-
-        assert_eq!(mai.category.last_unique_id, 17);
+        assert_eq!(*mai, get_address_app_info());
     }
 
     #[test]
