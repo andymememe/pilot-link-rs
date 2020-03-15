@@ -1,11 +1,12 @@
 use super::{get_short, set_short};
 use std::str;
 
+#[derive(Default, Debug)]
 pub struct CategoryAppInfo {
-    renamed: [u64; 16],
-    name: [String; 16],
-    id: [u8; 16],
-    last_unique_id: u8,
+    pub renamed: [u64; 16],
+    pub name: [String; 16],
+    pub id: [u8; 16],
+    pub last_unique_id: u8,
 }
 
 pub fn unpack_category_app_info(
@@ -16,6 +17,7 @@ pub fn unpack_category_app_info(
     let rec: u16;
     let mut record_offset: usize = 0;
 
+    // Not enough space
     if len < 2 + 16 * 16 + 16 + 4 {
         return 0;
     }
@@ -34,8 +36,15 @@ pub fn unpack_category_app_info(
 
     // Name
     for i in 0..16 {
+        let mut j: usize = 16;
+        for _j in 0..16 {
+            if record[record_offset + _j] == 0 {
+                j = _j;
+                break;
+            }
+        }
         ai.name[i] =
-            String::from(str::from_utf8(&record[record_offset..record_offset + 16]).unwrap());
+            String::from(str::from_utf8(&record[record_offset..record_offset + j]).unwrap());
         record_offset += 16;
     }
 
@@ -47,6 +56,7 @@ pub fn unpack_category_app_info(
 
     // Last Unique ID
     ai.last_unique_id = record[record_offset];
+
     // Return Record Length
     2 + 16 * 16 + 16 + 4
 }
@@ -59,6 +69,10 @@ pub fn pack_category_app_info(
     let mut rec: u16;
     let mut record_offset: usize = 0;
 
+    if record.len() == 0 {
+        return 2 + 16 * 16 + 16 + 4;
+    }
+
     if len < 2 + 16 * 16 + 16 + 4 {
         return 0;
     }
@@ -66,7 +80,7 @@ pub fn pack_category_app_info(
     // Pack Renamed
     rec = 0;
     for i in 0..16 {
-        if ai.renamed[i] == 0 {
+        if ai.renamed[i] != 0 {
             rec |= 1 << i;
         }
     }

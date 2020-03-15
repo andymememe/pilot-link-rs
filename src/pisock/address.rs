@@ -1,27 +1,37 @@
 use super::appinfo::{pack_category_app_info, unpack_category_app_info, CategoryAppInfo};
-use super::{get_buf_string, get_long, get_short, set_long, set_short};
+use super::{get_buf_string, get_long, get_short, set_long, set_short, reset_block, check_block};
 
 use std::str;
+use std::time::{SystemTime, UNIX_EPOCH};
 
+#[derive(Default, Debug)]
 pub struct Address {
-    phone_label: [u64; 5],
-    show_phone: u64,
-    entry: [String; 19],
+    pub phone_label: [u64; 5],
+    pub show_phone: u64,
+    pub entry: [String; 19],
 }
 
+#[derive(Default, Debug)]
 pub struct AddressAppInfo {
-    address_type: AddressType,
-    category: CategoryAppInfo,
-    labels: [String; 16],
-    label_renamed: [i64; 22],
-    phone_labels: [String; 16],
-    country: u16,
-    sort_by_company: u8,
+    pub address_type: AddressType,
+    pub category: CategoryAppInfo,
+    pub labels: [String; 22],
+    pub label_renamed: [i64; 22],
+    pub phone_labels: [String; 8],
+    pub country: u16,
+    pub sort_by_company: u8,
 }
 
+#[derive(Debug)]
 pub enum AddressType {
     AddressV1,
     Unknown,
+}
+
+impl Default for AddressType {
+    fn default() -> AddressType {
+        AddressType::AddressV1
+    }
 }
 
 pub enum AddressField {
@@ -175,9 +185,14 @@ pub fn unpack_address_app_info(
     // Unpack Category App Info
     i = unpack_category_app_info(&mut aai.category, record, len);
 
+    if record.len() == 0 {
+        return i + destlen;
+    }
+
     if i == 0 {
         return i;
     }
+
     record_offset += i;
     len_offset -= i;
     if len_offset < destlen {
@@ -193,8 +208,15 @@ pub fn unpack_address_app_info(
 
     // Unpack Label
     for i in 0..22 {
+        let mut j: usize = 16;
+        for _j in 0..16 {
+            if record[record_offset + _j] == 0 {
+                j = _j;
+                break;
+            }
+        }
         aai.labels[i] =
-            String::from(str::from_utf8(&record[record_offset..record_offset + 16]).unwrap());
+            String::from(str::from_utf8(&record[record_offset..record_offset + j]).unwrap());
         record_offset += 16;
     }
 
@@ -230,6 +252,11 @@ pub fn pack_address_app_info(
 
     // Pack Category App Info
     i = pack_category_app_info(&aai.category, record, len);
+    
+    if record.len() == 0 {
+        return destlen + i;
+    }
+
     if i == 0 {
         return i;
     }
@@ -243,7 +270,7 @@ pub fn pack_address_app_info(
     // Pack Label Renamed
     r = 0;
     for i in 0..22 {
-        if aai.label_renamed[i] == 0 {
+        if aai.label_renamed[i] != 0 {
             r |= 1 << i;
         }
     }
@@ -280,6 +307,214 @@ pub fn pack_address_app_info(
 mod test {
     use super::*;
 
+    fn get_address_app_block() -> Vec<u8> {
+        String::from("\
+            \x00\x10\x55\x6e\x66\x69\x6c\x65\x64\x00\x00\x00\x00\x00\x00\x00\
+            \x00\x00\x42\x75\x73\x69\x6e\x65\x73\x73\x00\x00\x00\x00\x00\x00\
+            \x00\x00\x50\x65\x72\x73\x6f\x6e\x61\x6c\x00\x00\x00\x00\x00\x00\
+            \x00\x00\x51\x75\x69\x63\x6b\x4c\x69\x73\x74\x00\x00\x00\x00\x00\
+            \x00\x00\x46\x6f\x6f\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\
+            \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\
+            \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\
+            \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\
+            \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\
+            \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\
+            \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\
+            \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\
+            \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\
+            \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\
+            \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\
+            \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\
+            \x00\x00\x00\x01\x02\x03\x11\x00\x00\x00\x00\x00\x00\x00\x00\x00\
+            \x00\x00\x11\x00\x00\x00\x00\x00\x0e\x00\x4c\x61\x73\x74\x20\x6e\
+            \x61\x6d\x65\x00\x00\x00\x00\x00\x00\x00\x46\x69\x72\x73\x74\x20\
+            \x6e\x61\x6d\x65\x00\x00\x00\x00\x00\x00\x43\x6f\x6d\x70\x61\x6e\
+            \x79\x00\x00\x00\x00\x00\x00\x00\x00\x00\x57\x6f\x72\x6b\x00\x00\
+            \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x48\x6f\x6d\x65\x00\x00\
+            \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x46\x61\x78\x00\x00\x00\
+            \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x4f\x74\x68\x65\x72\x00\
+            \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x45\x2d\x6d\x61\x69\x6c\
+            \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x41\x64\x64\x72\x65\x73\
+            \x73\x00\x00\x00\x00\x00\x00\x00\x00\x00\x43\x69\x74\x79\x00\x00\
+            \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x53\x74\x61\x74\x65\x00\
+            \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x5a\x69\x70\x20\x43\x6f\
+            \x64\x65\x00\x00\x00\x00\x00\x00\x00\x00\x43\x6f\x75\x6e\x74\x72\
+            \x79\x00\x00\x00\x00\x00\x00\x00\x00\x00\x54\x69\x74\x6c\x65\x00\
+            \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x43\x75\x73\x74\x6f\x6d\
+            \x20\x31\x00\x00\x00\x00\x00\x00\x00\x00\x43\x75\x73\x74\x6f\x6d\
+            \x20\x32\x00\x00\x00\x00\x00\x00\x00\x00\x43\x75\x73\x74\x6f\x6d\
+            \x20\x33\x00\x00\x00\x00\x00\x00\x00\x00\x43\x75\x73\x74\x6f\x6d\
+            \x20\x34\x00\x00\x00\x00\x00\x00\x00\x00\x4e\x6f\x74\x65\x00\x00\
+            \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x4d\x61\x69\x6e\x00\x00\
+            \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x50\x61\x67\x65\x72\x00\
+            \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x4d\x6f\x62\x69\x6c\x65\
+            \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x17\x00\x00\x00"
+        ).as_bytes().to_vec()
+    }
+
+    fn get_address_app_info() -> AddressAppInfo {
+        let mut address_app_info = AddressAppInfo::default();
+        address_app_info.category.renamed = [
+            0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0
+        ];
+        address_app_info.category.name = [
+            String::from("Unfiled"),
+            String::from("Business"),
+            String::from("Personal"),
+            String::from("QuickList"),
+            String::from("Foo"),
+            String::from(""),
+            String::from(""),
+            String::from(""),
+            String::from(""),
+            String::from(""),
+            String::from(""),
+            String::from(""),
+            String::from(""),
+            String::from(""),
+            String::from(""),
+            String::from("")
+        ];
+        address_app_info.category.id = [
+            0, 1, 2, 3, 17, 0, 0, 0,
+            0, 0, 0, 0,  0, 0, 0, 0
+        ];
+        address_app_info.category.last_unique_id = 17;
+        address_app_info.labels = [
+            String::from("Last name"),
+            String::from("First name"),
+            String::from("Company"),
+            String::from("Work"),
+            String::from("Home"),
+            String::from("Fax"),
+            String::from("Other"),
+            String::from("E-mail"),
+            String::from("Address"),
+            String::from("City"),
+            String::from("State"),
+            String::from("Zip Code"),
+            String::from("Country"),
+            String::from("Title"),
+            String::from("Custom 1"),
+            String::from("Custom 2"),
+            String::from("Custom 3"),
+            String::from("Custom 4"),
+            String::from("Note"),
+            String::from("Main"),
+            String::from("Pager"),
+            String::from("Mobile")
+        ];
+        address_app_info.label_renamed = [
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 512, 1024, 2048, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0
+        ];
+        address_app_info.phone_labels = [
+            String::from("Work"),
+            String::from("Home"),
+            String::from("Fax"),
+            String::from("Other"),
+            String::from("E-mail"),
+            String::from("Main"),
+            String::from("Pager"),
+            String::from("Mobile")
+        ];
+        address_app_info.country = 5888;
+        address_app_info.sort_by_company = 0;
+
+        return address_app_info
+    }
+
+    fn get_address_record() -> Vec<u8> {
+        String::from("\
+            \x00\x14\x32\x10\x00\x04\x41\x03\x00\x53\x68\x61\x77\x00\x42\x65\
+            \x72\x6e\x61\x72\x64\x00\x4e\x6f\x6e\x65\x20\x6b\x6e\x6f\x77\x6e\
+            \x00\x43\x31\x00\x41\x20\x6e\x6f\x74\x65\x2e\x00"
+        ).as_bytes().to_vec()
+    }
+
     #[test]
-    fn test_add() {}
+    fn test_unpack_address_app_info() {
+        let address_app_block: &Vec<u8> = &get_address_app_block();
+        let mai: &mut AddressAppInfo = &mut AddressAppInfo::default();
+        
+        let l = unpack_address_app_info(mai, address_app_block, address_app_block.len() + 10);
+        assert_eq!(l, address_app_block.len());
+
+        let l = unpack_address_app_info(mai, address_app_block, address_app_block.len() + 1);
+        assert_eq!(l, address_app_block.len());
+
+        let l = unpack_address_app_info(mai, address_app_block, address_app_block.len() - 10);
+        assert_eq!(l, 0);
+
+        let l = unpack_address_app_info(mai, address_app_block, address_app_block.len());
+        assert_eq!(l, address_app_block.len());
+
+        let category_names = vec![
+            String::from("Unfiled"),
+            String::from("Business"),
+            String::from("Personal"),
+            String::from("QuickList"),
+            String::from("Foo"),
+        ];
+
+        for i in 0..16 {
+            if i < category_names.len() {
+                assert_eq!(mai.category.name[i], category_names[i])
+            } else {
+                assert_eq!(mai.category.name[i], String::from(""))
+            }
+        }
+
+        let not_renamed = vec![4];
+        for i in 0..16 {
+            if not_renamed.contains(&i) {
+                assert_ne!(mai.category.renamed[i], 0);
+            } else {
+                assert_eq!(mai.category.renamed[i], 0);
+            }
+        }
+
+        let ids = vec![0, 1, 2, 3, 17];
+        for i in 0..16 {
+            if i < ids.len() {
+                assert_eq!(mai.category.id[i], ids[i]);
+            } else {
+                assert_eq!(mai.category.id[i], 0);
+            }
+        }
+
+        assert_eq!(mai.category.last_unique_id, 17);
+    }
+
+    #[test]
+    fn test_pack_address_app_info() {
+        let buf = &mut vec![];
+        let target = &mut Vec::<u8>::new();
+        let address_app_block: &Vec<u8> = &get_address_app_block();
+        let mai = &get_address_app_info();
+        let now = SystemTime::now();
+        let seed = now.duration_since(UNIX_EPOCH).expect("Time went backward").as_millis() as u128;
+
+        let l = pack_address_app_info(mai, buf, 0);
+        assert_eq!(l, address_app_block.len());
+
+        target.resize(8192, 0);
+        reset_block(target, 8192, seed);
+        let l = pack_address_app_info(mai, target, 1);
+        assert_eq!(l, 0);
+        assert!(!check_block(9, target, 8192, 1, String::from("pack_address_app_info"), seed));
+
+        reset_block(target, 8192, seed);
+        let l = pack_address_app_info(mai, target, 8192 - 256);
+        assert_eq!(l, address_app_block.len());
+        assert!(!check_block(9, target, 8192, l, String::from("pack_address_app_info"), seed));
+
+        for i in 0..address_app_block.len() {
+            assert_eq!(target[i], address_app_block[i]);
+        }
+    }
+
+    // TODO: Unpack Address
+    // TODO: Pack Address
 }
