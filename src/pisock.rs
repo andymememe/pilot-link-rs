@@ -34,14 +34,14 @@ fn get_buf_string(buf: &Vec<u8>, offset: usize) -> (String, usize) {
     (String::from(ret), i)
 }
 
-fn reset_block(buffer: &mut Vec<u8>, len: usize, seed: u128) {
+pub fn reset_block(buffer: &mut Vec<u8>, len: usize, seed: u128) {
     buffer.resize(len, 0);
     for i in 0..len {
         buffer[i] = (i as u128 + seed) as u8 & 0xff;
     }
 }
 
-fn check_block(test: i32, buffer: &Vec<u8>, len: usize, count: usize, name: String, seed: u128) -> bool {
+pub fn check_block(test: i32, buffer: &Vec<u8>, len: usize, count: usize, name: String, seed: u128) -> bool {
     let mut aft: usize = 0;
 
     for i in count .. len {

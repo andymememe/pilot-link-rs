@@ -1,5 +1,5 @@
 use super::appinfo::{pack_category_app_info, unpack_category_app_info, CategoryAppInfo};
-use super::{get_buf_string, get_long, get_short, set_long, set_short, reset_block, check_block};
+use super::{get_buf_string, get_long, get_short, set_long, set_short};
 
 use std::str;
 
@@ -305,6 +305,7 @@ pub fn pack_address_app_info(
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::pisock::{reset_block, check_block};
     use std::time::{SystemTime, UNIX_EPOCH};
 
     fn get_address_app_block() -> Vec<u8> {
