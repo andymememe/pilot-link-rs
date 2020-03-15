@@ -58,25 +58,16 @@ fn lo(x: u8) -> u8 {
 }
 
 pub fn unpack_address(
-    addr_option: Option<&mut Address>,
-    buf_option: Option<&Vec<u8>>,
+    addr: &mut Address,
+    buf: &Vec<u8>,
     addr_type: AddressType,
 ) -> i32 {
     let contents: u64;
-    let buf: &Vec<u8>;
-    let addr: &mut Address;
     let mut offset: usize;
-
-    addr = addr_option.unwrap();
 
     match addr_type {
         AddressType::AddressV1 => {}
         _ => return -1,
-    }
-
-    match buf_option {
-        Some(x) => buf = x,
-        None => return -1,
     }
 
     if buf.len() < 9 {
@@ -113,12 +104,10 @@ pub fn unpack_address(
 }
 
 pub fn pack_address(
-    addr_option: Option<&Address>,
-    buf_option: &mut Option<Vec<u8>>,
+    addr: &Address,
+    buf: &mut Vec<u8>,
     addr_type: AddressType,
 ) -> i32 {
-    let addr: &Address;
-    let buf: &mut Vec<u8>;
     let mut phone_flag: u64;
     let mut contents: u64;
     let mut destlen: usize = 9;
@@ -128,16 +117,6 @@ pub fn pack_address(
     match addr_type {
         AddressType::AddressV1 => {}
         _ => return -1,
-    }
-
-    match addr_option {
-        Some(x) => addr = x,
-        None => return -1,
-    }
-
-    match buf_option {
-        Some(x) => buf = x,
-        None => return -1,
     }
 
     // Pack Contents
@@ -180,29 +159,21 @@ pub fn pack_address(
 }
 
 pub fn unpack_address_app_info(
-    aai_option: Option<&mut AddressAppInfo>,
-    record_option: Option<&Vec<u8>>,
+    aai: &mut AddressAppInfo,
+    record: &Vec<u8>,
     len: usize,
 ) -> usize {
-    let record: &Vec<u8>;
-    let aai: &mut AddressAppInfo;
     let r: u64;
     let i: usize;
     let destlen: usize = 4 + 16 * 22 + 2 + 2;
     let mut record_offset: usize = 0;
     let mut len_offset = len;
 
-    aai = aai_option.unwrap();
-
     // Unpack Address Type
     aai.address_type = AddressType::AddressV1;
 
     // Unpack Category App Info
-    i = unpack_category_app_info(&mut aai.category, record_option, len);
-    match record_option {
-        Some(x) => record = x,
-        None => return i + destlen,
-    }
+    i = unpack_category_app_info(&mut aai.category, record, len);
 
     if i == 0 {
         return i;
@@ -249,7 +220,7 @@ pub fn unpack_address_app_info(
 
 pub fn pack_address_app_info(
     aai: &AddressAppInfo,
-    record: Option<&mut Vec<u8>>,
+    record: &mut Vec<u8>,
     len: usize,
 ) -> usize {
     let i: usize;

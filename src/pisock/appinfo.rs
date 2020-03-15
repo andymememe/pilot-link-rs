@@ -10,17 +10,11 @@ pub struct CategoryAppInfo {
 
 pub fn unpack_category_app_info(
     ai: &mut CategoryAppInfo,
-    record_option: Option<&Vec<u8>>,
+    record: &Vec<u8>,
     len: usize,
 ) -> usize {
     let rec: u16;
-    let record: &Vec<u8>;
     let mut record_offset: usize = 0;
-
-    match record_option {
-        Some(x) => record = x,
-        None => return 0,
-    }
 
     if len < 2 + 16 * 16 + 16 + 4 {
         return 0;
@@ -59,17 +53,11 @@ pub fn unpack_category_app_info(
 
 pub fn pack_category_app_info(
     ai: &CategoryAppInfo,
-    record_option: Option<&mut Vec<u8>>,
+    record: &mut Vec<u8>,
     len: usize,
 ) -> usize {
     let mut rec: u16;
-    let record: &mut Vec<u8>;
     let mut record_offset: usize = 0;
-
-    match record_option {
-        Some(x) => record = x,
-        None => return 2 + 16 * 16 + 16 + 4,
-    }
 
     if len < 2 + 16 * 16 + 16 + 4 {
         return 0;
