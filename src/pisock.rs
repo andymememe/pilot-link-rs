@@ -28,7 +28,6 @@ fn get_buf_string(buf: &Vec<u8>, offset: usize) -> (String, usize) {
     while buf[i] != 0 {
         i += 1;
     }
-    i += 1;
     let ret = str::from_utf8(&buf[offset..i]).unwrap();
 
     (String::from(ret), i)

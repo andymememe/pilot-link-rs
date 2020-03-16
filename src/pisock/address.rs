@@ -104,7 +104,7 @@ pub fn unpack_address(
                 return 0;
             }
             let (_entry, _offset) = get_buf_string(buf, offset);
-            offset = _offset;
+            offset = _offset + 1;
             addr.entry[v] = _entry;
         }
     }
@@ -148,6 +148,8 @@ pub fn pack_address(
                 buf[buffer_offset] = *ele;
                 buffer_offset += 1;
             }
+            buf[buffer_offset] = 0;
+            buffer_offset += 1;
         }
     }
 
@@ -184,7 +186,7 @@ pub fn unpack_address_app_info(
     // Unpack Category App Info
     i = unpack_category_app_info(&mut aai.category, record, len);
 
-    if record.len() == 0 {
+    if record.capacity() == 0 {
         return i + destlen;
     }
 
@@ -252,7 +254,7 @@ pub fn pack_address_app_info(
     // Pack Category App Info
     i = pack_category_app_info(&aai.category, record, len);
     
-    if record.len() == 0 {
+    if record.capacity() == 0 {
         return destlen + i;
     }
 
@@ -423,7 +425,7 @@ mod test {
         address_app_info.country = 5888;
         address_app_info.sort_by_company = 0;
 
-        return address_app_info
+        address_app_info
     }
 
     fn get_address_record() -> Vec<u8> {
@@ -432,6 +434,35 @@ mod test {
             \x72\x6e\x61\x72\x64\x00\x4e\x6f\x6e\x65\x20\x6b\x6e\x6f\x77\x6e\
             \x00\x43\x31\x00\x41\x20\x6e\x6f\x74\x65\x2e\x00"
         ).as_bytes().to_vec()
+    }
+
+    fn get_address() -> Address {
+        let mut address = Address::default();
+        address.phone_label = [0, 1, 2, 3, 4];
+        address.show_phone = 1;
+        address.entry = [
+            String::from("Shaw"),
+            String::from("Bernard"),
+            String::from(""),
+            String::from(""),
+            String::from(""),
+            String::from(""),
+            String::from(""),
+            String::from(""),
+            String::from("None known"),
+            String::from(""),
+            String::from(""),
+            String::from(""),
+            String::from(""),
+            String::from(""),
+            String::from("C1"),
+            String::from(""),
+            String::from(""),
+            String::from(""),
+            String::from("A note.")
+        ];
+
+        address
     }
 
     #[test]
@@ -480,7 +511,25 @@ mod test {
             assert_eq!(target[i], address_app_block[i]);
         }
     }
+    #[test]
+    fn test_unpack_address() {
+        let m = &mut Address::default();
+        let address_record = get_address_record();
 
-    // TODO: Unpack Address
-    // TODO: Pack Address
+        unpack_address(m, &address_record, AddressType::AddressV1);
+        assert_eq!(*m, get_address());
+    }
+
+    #[test]
+    fn test_pack_address() {
+        let record_buffer = &mut Vec::with_capacity(0);
+        let address_record = get_address_record();
+        let address = get_address();
+
+        assert_eq!(pack_address(&address, record_buffer, AddressType::AddressV1), 0);
+        assert_eq!(record_buffer.len(), address_record.len());
+        for i in 0..address_record.len() {
+            assert_eq!(record_buffer[i], address_record[i]);
+        }
+    }
 }

@@ -69,7 +69,7 @@ pub fn pack_category_app_info(
     let mut rec: u16;
     let mut record_offset: usize = 0;
 
-    if record.len() == 0 {
+    if record.capacity() == 0 {
         return 2 + 16 * 16 + 16 + 4;
     }
 
@@ -123,7 +123,108 @@ pub fn pack_category_app_info(
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::pisock::{reset_block, check_block};
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    fn get_category_app_block() -> Vec<u8> {
+        String::from("\
+            \x00\x10\x55\x6e\x66\x69\x6c\x65\x64\x00\x00\x00\x00\x00\x00\x00\
+            \x00\x00\x42\x75\x73\x69\x6e\x65\x73\x73\x00\x00\x00\x00\x00\x00\
+            \x00\x00\x50\x65\x72\x73\x6f\x6e\x61\x6c\x00\x00\x00\x00\x00\x00\
+            \x00\x00\x51\x75\x69\x63\x6b\x4c\x69\x73\x74\x00\x00\x00\x00\x00\
+            \x00\x00\x46\x6f\x6f\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\
+            \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\
+            \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\
+            \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\
+            \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\
+            \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\
+            \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\
+            \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\
+            \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\
+            \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\
+            \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\
+            \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\
+            \x00\x00\x00\x01\x02\x03\x11\x00\x00\x00\x00\x00\x00\x00\x00\x00\
+            \x00\x00\x11\x00\x00\x00"
+        ).as_bytes().to_vec()
+    }
+
+    fn get_category_app_info() -> CategoryAppInfo {
+        let mut category_app_info = CategoryAppInfo::default();
+        category_app_info.renamed = [
+            0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0
+        ];
+        category_app_info.name = [
+            String::from("Unfiled"),
+            String::from("Business"),
+            String::from("Personal"),
+            String::from("QuickList"),
+            String::from("Foo"),
+            String::from(""),
+            String::from(""),
+            String::from(""),
+            String::from(""),
+            String::from(""),
+            String::from(""),
+            String::from(""),
+            String::from(""),
+            String::from(""),
+            String::from(""),
+            String::from("")
+        ];
+        category_app_info.id = [
+            0, 1, 2, 3, 17, 0, 0, 0,
+            0, 0, 0, 0,  0, 0, 0, 0
+        ];
+        category_app_info.last_unique_id = 17;
+
+        category_app_info
+    }
 
     #[test]
-    fn test_add() {}
+    fn test_unpack_category_app_info() {
+        let category_app_block: &Vec<u8> = &get_category_app_block();
+        let mci: &mut CategoryAppInfo = &mut CategoryAppInfo::default();
+        
+        let l = unpack_category_app_info(mci, category_app_block, category_app_block.len() + 10);
+        assert_eq!(l, category_app_block.len());
+
+        let l = unpack_category_app_info(mci, category_app_block, category_app_block.len() + 1);
+        assert_eq!(l, category_app_block.len());
+
+        let l = unpack_category_app_info(mci, category_app_block, category_app_block.len() - 10);
+        assert_eq!(l, 0);
+
+        let l = unpack_category_app_info(mci, category_app_block, category_app_block.len());
+        assert_eq!(l, category_app_block.len());
+        assert_eq!(*mci, get_category_app_info());
+    }
+
+    #[test]
+    fn test_pack_category_app_info() {
+        let buf = &mut vec![];
+        let target = &mut Vec::<u8>::new();
+        let category_app_block: &Vec<u8> = &get_category_app_block();
+        let mci = &get_category_app_info();
+        let now = SystemTime::now();
+        let seed = now.duration_since(UNIX_EPOCH).expect("Time went backward").as_millis() as u128;
+
+        let l = pack_category_app_info(mci, buf, 0);
+        assert_eq!(l, category_app_block.len());
+
+        target.resize(8192, 0);
+        reset_block(target, 8192, seed);
+        let l = pack_category_app_info(mci, target, 1);
+        assert_eq!(l, 0);
+        assert!(!check_block(9, target, 8192, 1, String::from("pack_category_app_info"), seed));
+
+        reset_block(target, 8192, seed);
+        let l = pack_category_app_info(mci, target, 8192 - 256);
+        assert_eq!(l, category_app_block.len());
+        assert!(!check_block(9, target, 8192, l, String::from("pack_category_app_info"), seed));
+
+        for i in 0..category_app_block.len() {
+            assert_eq!(target[i], category_app_block[i]);
+        }
+    }
 }
