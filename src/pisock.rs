@@ -1,5 +1,6 @@
 pub mod address;
 pub mod appinfo;
+pub mod blob;
 
 use std::str;
 
