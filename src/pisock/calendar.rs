@@ -8,6 +8,13 @@ use super::blob::{
 };
 use super::appinfo::CategoryAppInfo;
 
+pub const ALARM_FLAG: u8 = 64;
+pub const REPEAT_FLAG: u8 = 32;
+pub const NOTE_FLAG: u8 = 16;
+pub const EXCEPT_FLAG: u8 = 8;
+pub const DESC_FLAG: u8 = 4;
+pub const LOC_FLAG: u8 = 2;
+
 #[derive(Debug, PartialEq)]
 pub enum CalendarType {
     CalendarV1,
