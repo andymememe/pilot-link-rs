@@ -9,3 +9,4 @@ name = "pilot_link"
 path = "src/lib.rs"
 
 [dependencies]
+tzdata = "0.4.1"

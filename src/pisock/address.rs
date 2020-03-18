@@ -1,25 +1,16 @@
-use super::appinfo::{pack_category_app_info, unpack_category_app_info, CategoryAppInfo};
-use super::{get_buf_string, get_long, get_short, set_long, set_short};
-
+use super::appinfo::{
+    pack_category_app_info,
+    unpack_category_app_info,
+    CategoryAppInfo
+};
+use super::{
+    get_buf_string,
+    get_long,
+    get_short,
+    set_long,
+    set_short
+};
 use std::str;
-
-#[derive(Default, Debug, PartialEq)]
-pub struct Address {
-    pub phone_label: [u64; 5],
-    pub show_phone: u64,
-    pub entry: [String; 19],
-}
-
-#[derive(Default, Debug, PartialEq)]
-pub struct AddressAppInfo {
-    pub address_type: AddressType,
-    pub category: CategoryAppInfo,
-    pub labels: [String; 22],
-    pub label_renamed: [i64; 22],
-    pub phone_labels: [String; 8],
-    pub country: u16,
-    pub sort_by_company: u8,
-}
 
 #[derive(Debug, PartialEq)]
 pub enum AddressType {
@@ -54,6 +45,24 @@ pub enum AddressField {
     EntryCustom4,
     EntryNote,
     EntryCategory,
+}
+
+#[derive(Default, Debug, PartialEq)]
+pub struct Address {
+    pub phone_label: [u64; 5],
+    pub show_phone: u64,
+    pub entry: [String; 19],
+}
+
+#[derive(Default, Debug, PartialEq)]
+pub struct AddressAppInfo {
+    pub address_type: AddressType,
+    pub category: CategoryAppInfo,
+    pub labels: [String; 22],
+    pub label_renamed: [i64; 22],
+    pub phone_labels: [String; 8],
+    pub country: u16,
+    pub sort_by_company: u8,
 }
 
 // Hi bits

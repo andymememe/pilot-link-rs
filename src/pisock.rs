@@ -1,6 +1,7 @@
 pub mod address;
 pub mod appinfo;
 pub mod blob;
+pub mod calendar;
 
 use std::str;
 

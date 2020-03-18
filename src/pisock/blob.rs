@@ -1,4 +1,7 @@
-use super::{get_short, set_short};
+use super::{
+    get_short,
+    set_short
+};
 use std::str;
 
 pub const BLOB_TYPE_CALENDAR_TIMEZONE_ID: &str = "Bd00";

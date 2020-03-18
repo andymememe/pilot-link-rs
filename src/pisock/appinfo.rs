@@ -1,4 +1,7 @@
-use super::{get_short, set_short};
+use super::{
+    get_short,
+    set_short
+};
 use std::str;
 
 #[derive(Default, Debug, PartialEq)]
