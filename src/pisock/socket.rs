@@ -5,12 +5,13 @@ use std::sync::Mutex;
 use std::collections::LinkedList;
 
 pub type SocketList<T> = LinkedList<Socket<T>>;
+// pub static socket_list: SocketList<Box<dyn Data>> = SocketList::default();
 
 pub struct Device {
 
 }
 
-pub struct Socket<T: Data + Copy> {
+pub struct Socket<T: Data> {
     pub socket_descriptor: i64,
 
 	pub socket_type: i64,
@@ -57,7 +58,7 @@ pub struct Socket<T: Data + Copy> {
 	pub palmos_error: i64
 }
 
-pub fn find_socket<T: Data + Copy>(socket_list: &SocketList<T>, sd: i64) -> Option<&Socket<T>> {
+pub fn find_socket<T: Data>(sd: i64) -> Option<&'static Socket<T>> {
     let mutex = Mutex::new(socket_list);
     {
         let list = mutex.lock().unwrap();
@@ -65,7 +66,7 @@ pub fn find_socket<T: Data + Copy>(socket_list: &SocketList<T>, sd: i64) -> Opti
     }
 }
 
-pub fn socket_list_find<T: Data + Copy>(a_socket_list: &SocketList<T>, sd: i64) -> Option<&Socket<T>> {
+pub fn socket_list_find<T: Data>(a_socket_list: &SocketList<T>, sd: i64) -> Option<&Socket<T>> {
     let mut iter = a_socket_list.iter();
     let res = iter.next();
     while !res.is_none() {

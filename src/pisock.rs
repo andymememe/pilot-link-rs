@@ -8,7 +8,7 @@ pub mod socket;
 
 use std::str;
 
-pub trait Data {}
+pub trait Data: Copy {}
 
 fn get_short(ptr: &[u8]) -> u16 {
     (ptr[0] as u16) << 8 | (ptr[1] as u16)

@@ -1,6 +1,14 @@
+use log::debug;
+
 use super::Data;
-use super::protocol::Protocol;
-use super::socket::Socket;
+use super::protocol::{
+    Protocol,
+    OptLevels,
+    get_protocol
+};
+use super::socket::{
+    Socket
+};
 
 #[derive(Clone, Copy)]
 pub struct CMPData {
@@ -14,7 +22,7 @@ impl Data for CMPData {
 
 }
 
-pub fn get_cmp_protocol() -> Protocol<CMPData>
+pub fn new_cmp_protocol() -> Protocol<CMPData>
 {
 	return Protocol::<CMPData> {
         level: 0,
@@ -33,7 +41,16 @@ pub fn get_cmp_protocol() -> Protocol<CMPData>
 }
 
 fn cmp_rx(ps: &Socket<CMPData>, buf: &mut Vec<u8>, len: usize, flags: i64) -> i128 {
-    0
+    let byte: i64;
+    let prot: Protocol<CMPData>;
+    let next: Protocol<CMPData>;
+    let data: CMPData;
+
+    debug!("CMP RX len={} flags=0x{:#02x}\n", len, flags);
+
+    prot = get_protocol(ps.socket_descriptor, OptLevels::PI_LEVEL_CMP).unwrap();
+
+	0
 }
 
 fn cmp_tx(ps: &mut Socket<CMPData>, buf: &Vec<u8>, len: usize, flags: i64) -> i128 {
