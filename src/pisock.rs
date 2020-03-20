@@ -2,8 +2,13 @@ pub mod address;
 pub mod appinfo;
 pub mod blob;
 pub mod calendar;
+pub mod cmp;
+pub mod protocol;
+pub mod socket;
 
 use std::str;
+
+pub trait Data {}
 
 fn get_short(ptr: &[u8]) -> u16 {
     (ptr[0] as u16) << 8 | (ptr[1] as u16)
