@@ -14,11 +14,11 @@ pub struct Device {}
 
 #[derive(Clone)]
 pub struct Socket {
-    pub socket_descriptor: i64,
+    pub socket_descriptor: i32,
 
-    pub socket_type: i64,
-    pub protocol: i64,
-    pub cmd: i64,
+    pub socket_type: i32,
+    pub protocol: i32,
+    pub cmd: i32,
     // Local Socket
     // pub laddr: SocketAddress,
     pub laddrlen: usize,
@@ -32,7 +32,7 @@ pub struct Socket {
     pub cmd_queue: Vec<Protocol>,
     pub cmd_len: usize,
     pub device: Device,
-    pub socket_state: i64,
+    pub socket_state: i32,
 
     // Honor packet reception timeouts
     // Set most to 1 of the time to have timeout management on incoming packets.
@@ -40,19 +40,19 @@ pub struct Socket {
     // This is used, for example,
     // to disable timeouts in dlp_CallApplication()
     // so that lengthy tasks don't return an error.
-    pub honor_rx_to: i64,
-    pub command: i64,
-    pub accept_to: i64,
+    pub honor_rx_to: i32,
+    pub command: i32,
+    pub accept_to: i32,
     // DLP
-    pub dlprecord: i64,
-    pub dlpversion: i64,
+    pub dlprecord: i32,
+    pub dlpversion: i32,
     pub maxrecsize: u64,
     // Error code
     pub last_error: DLPErrorDefinitions,
     pub palmos_error: i32,
 }
 
-pub fn find_socket(sd: i64) -> Option<Socket> {
+pub fn find_socket(sd: i32) -> Option<Socket> {
     let mutex = Mutex::new(&SOCKET_LIST);
     {
         let list = mutex.lock().unwrap();
@@ -60,7 +60,7 @@ pub fn find_socket(sd: i64) -> Option<Socket> {
     }
 }
 
-pub fn socket_list_search(a_socket_list: &SocketList, sd: i64) -> Option<Socket> {
+pub fn socket_list_search(a_socket_list: &SocketList, sd: i32) -> Option<Socket> {
     let mut iter = a_socket_list.iter();
     let res = iter.next();
     while !res.is_none() {
@@ -73,7 +73,7 @@ pub fn socket_list_search(a_socket_list: &SocketList, sd: i64) -> Option<Socket>
     None
 }
 
-pub fn socket_set_error(sd: i64, error_code: DLPErrorDefinitions) -> DLPErrorDefinitions {
+pub fn socket_set_error(sd: i32, error_code: DLPErrorDefinitions) -> DLPErrorDefinitions {
     let mut ps: Socket;
     match find_socket(sd) {
         Some(x) => {

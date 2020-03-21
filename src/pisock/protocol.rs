@@ -28,14 +28,14 @@ pub struct Data {
 pub struct Protocol {
     pub level: OptLevels,
     pub data: Data,
-    pub read: fn(&Socket, &mut Vec<u8>, usize, i64) -> i128,
-    pub write: fn(&mut Socket, &Vec<u8>, usize, i64) -> i128,
-    pub flush: fn(&Socket, i64) -> i64,
-    pub get_sock_opt: fn(&Socket, i64, i64, &mut Data, usize) -> i64,
-    pub set_sock_opt: fn(&Socket, i64, i64, &Data, usize) -> i64,
+    pub read: fn(&Socket, &mut Vec<u8>, usize, i32) -> i64,
+    pub write: fn(&mut Socket, &Vec<u8>, usize, i32) -> i64,
+    pub flush: fn(&Socket, i32) -> i32,
+    pub get_sock_opt: fn(&Socket, OptLevels, i32, &mut Data, usize) -> i32,
+    pub set_sock_opt: fn(&Socket, OptLevels, i32, &Data, usize) -> i32,
 }
 
-pub fn get_protocol(sd: i64, level: OptLevels) -> Option<Protocol> {
+pub fn get_protocol(sd: i32, level: OptLevels) -> Option<Protocol> {
     match find_socket(sd) {
         Some(x) => protocol_queue_find(&x, level),
         None => {
@@ -45,7 +45,7 @@ pub fn get_protocol(sd: i64, level: OptLevels) -> Option<Protocol> {
     }
 }
 
-pub fn get_protocol_next (sd: i64, level: OptLevels) -> Option<Protocol> {
+pub fn get_protocol_next (sd: i32, level: OptLevels) -> Option<Protocol> {
     match find_socket(sd) {
         Some(x) => protocol_queue_find_next(&x, level),
         None => {
