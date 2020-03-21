@@ -1,7 +1,4 @@
-use super::{
-    get_short,
-    set_short
-};
+use super::{get_short, set_short};
 use std::str;
 
 pub const BLOB_TYPE_CALENDAR_TIMEZONE_ID: &str = "Bd00";
@@ -12,7 +9,7 @@ pub const MAX_BLOBS: usize = 10;
 pub struct Blob {
     pub blob_type: String,
     pub length: usize,
-    pub data: Vec::<u8>
+    pub data: Vec<u8>,
 }
 
 pub fn unpack_blob(blob: &mut Blob, data: &Vec<u8>, position: usize) -> usize {
@@ -20,17 +17,17 @@ pub fn unpack_blob(blob: &mut Blob, data: &Vec<u8>, position: usize) -> usize {
 
     // Unpack Type
     let mut i: usize = 4;
-    for _i in local_pos..local_pos+4 {
+    for _i in local_pos..local_pos + 4 {
         if data[_i] == 0 {
             i = _i;
             break;
         }
     }
-    blob.blob_type = String::from(str::from_utf8(&data[local_pos..local_pos+i]).unwrap());
+    blob.blob_type = String::from(str::from_utf8(&data[local_pos..local_pos + i]).unwrap());
     local_pos += 4;
 
     // Unpack Length
-    blob.length = get_short(&data[local_pos..local_pos+2]) as usize;
+    blob.length = get_short(&data[local_pos..local_pos + 2]) as usize;
     local_pos += 2;
 
     // Unpack Data
@@ -47,7 +44,7 @@ pub fn pack_blob(blob: &Blob, buffer: &mut Vec<u8>) -> i32 {
     let mut offset: usize;
 
     offset = buffer.len();
-    buffer.resize(buffer.len() + 6 + blob.length , 0);
+    buffer.resize(buffer.len() + 6 + blob.length, 0);
 
     // Pack Type
     let blob_type_byte = blob.blob_type.as_bytes();
@@ -76,9 +73,12 @@ mod test {
     use super::*;
 
     fn get_blob_block() -> Vec<u8> {
-        String::from("\
-            \x00\x00\x42\x64\x30\x30\x00\x02\x01\x02"
-        ).as_bytes().to_vec()
+        String::from(
+            "\
+            \x00\x00\x42\x64\x30\x30\x00\x02\x01\x02",
+        )
+        .as_bytes()
+        .to_vec()
     }
 
     fn get_blob() -> Blob {
@@ -95,7 +95,6 @@ mod test {
         let b = &mut Blob::default();
         let blob = &get_blob();
         let blob_block = &get_blob_block();
-        
         unpack_blob(b, blob_block, 2);
         assert_eq!(*b, *blob);
     }

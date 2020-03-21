@@ -1,15 +1,5 @@
-use super::appinfo::{
-    pack_category_app_info,
-    unpack_category_app_info,
-    CategoryAppInfo
-};
-use super::{
-    get_buf_string,
-    get_long,
-    get_short,
-    set_long,
-    set_short
-};
+use super::appinfo::{pack_category_app_info, unpack_category_app_info, CategoryAppInfo};
+use super::{get_buf_string, get_long, get_short, set_long, set_short};
 use std::str;
 
 #[derive(Debug, PartialEq)]
@@ -49,8 +39,8 @@ pub enum AddressField {
 
 #[derive(Default, Debug, PartialEq)]
 pub struct Address {
-    pub phone_label: [u64; 5],
-    pub show_phone: u64,
+    pub phone_label: [u8; 5],
+    pub show_phone: u8,
     pub entry: [String; 19],
 }
 
@@ -75,11 +65,7 @@ fn lo(x: u8) -> u8 {
     x & 0x0f
 }
 
-pub fn unpack_address(
-    addr: &mut Address,
-    buf: &Vec<u8>,
-    addr_type: AddressType,
-) -> i32 {
+pub fn unpack_address(addr: &mut Address, buf: &Vec<u8>, addr_type: AddressType) -> i32 {
     let contents: u64;
     let mut offset: usize;
 
@@ -93,14 +79,14 @@ pub fn unpack_address(
     }
 
     // Unpack Show Phone
-    addr.show_phone = hi(buf[1]) as u64;
+    addr.show_phone = hi(buf[1]);
 
     // Unpack Phone Label
-    addr.phone_label[4] = lo(buf[1]) as u64;
-    addr.phone_label[3] = hi(buf[2]) as u64;
-    addr.phone_label[2] = lo(buf[2]) as u64;
-    addr.phone_label[1] = hi(buf[3]) as u64;
-    addr.phone_label[0] = lo(buf[4]) as u64;
+    addr.phone_label[4] = lo(buf[1]);
+    addr.phone_label[3] = hi(buf[2]);
+    addr.phone_label[2] = lo(buf[2]);
+    addr.phone_label[1] = hi(buf[3]);
+    addr.phone_label[0] = lo(buf[4]);
 
     // Unpack Contents
     contents = get_long(&buf[4..8]);
@@ -121,11 +107,7 @@ pub fn unpack_address(
     0
 }
 
-pub fn pack_address(
-    addr: &Address,
-    buf: &mut Vec<u8>,
-    addr_type: AddressType,
-) -> i32 {
+pub fn pack_address(addr: &Address, buf: &mut Vec<u8>, addr_type: AddressType) -> i32 {
     let mut phone_flag: u64;
     let mut contents: u64;
     let mut destlen: usize = 9;
@@ -163,12 +145,12 @@ pub fn pack_address(
     }
 
     // Pack Phone Flag
-    phone_flag = addr.phone_label[0] << 0;
-    phone_flag |= addr.phone_label[1] << 4;
-    phone_flag |= addr.phone_label[2] << 8;
-    phone_flag |= addr.phone_label[3] << 12;
-    phone_flag |= addr.phone_label[4] << 16;
-    phone_flag |= addr.show_phone << 20;
+    phone_flag = (addr.phone_label[0] as u64) << 0;
+    phone_flag |= (addr.phone_label[1] as u64) << 4;
+    phone_flag |= (addr.phone_label[2] as u64) << 8;
+    phone_flag |= (addr.phone_label[3] as u64) << 12;
+    phone_flag |= (addr.phone_label[4] as u64) << 16;
+    phone_flag |= (addr.show_phone as u64) << 20;
 
     // Add to byffer
     set_long(buf, 0, phone_flag);
@@ -178,11 +160,7 @@ pub fn pack_address(
     0
 }
 
-pub fn unpack_address_app_info(
-    aai: &mut AddressAppInfo,
-    record: &Vec<u8>,
-    len: usize,
-) -> usize {
+pub fn unpack_address_app_info(aai: &mut AddressAppInfo, record: &Vec<u8>, len: usize) -> usize {
     let r: u64;
     let i: usize;
     let destlen: usize = 4 + 16 * 22 + 2 + 2;
@@ -250,11 +228,7 @@ pub fn unpack_address_app_info(
     record_offset
 }
 
-pub fn pack_address_app_info(
-    aai: &AddressAppInfo,
-    record: &mut Vec<u8>,
-    len: usize,
-) -> usize {
+pub fn pack_address_app_info(aai: &AddressAppInfo, record: &mut Vec<u8>, len: usize) -> usize {
     let i: usize;
     let destlen: usize = 4 + 16 * 22 + 2 + 2;
     let mut r: u64;
@@ -262,7 +236,6 @@ pub fn pack_address_app_info(
 
     // Pack Category App Info
     i = pack_category_app_info(&aai.category, record, len);
-    
     if record.capacity() == 0 {
         return destlen + i;
     }
@@ -316,11 +289,12 @@ pub fn pack_address_app_info(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::pisock::{reset_block, check_block};
+    use crate::pisock::{check_block, reset_block};
     use std::time::{SystemTime, UNIX_EPOCH};
 
     fn get_address_app_block() -> Vec<u8> {
-        String::from("\
+        String::from(
+            "\
             \x00\x10\x55\x6e\x66\x69\x6c\x65\x64\x00\x00\x00\x00\x00\x00\x00\
             \x00\x00\x42\x75\x73\x69\x6e\x65\x73\x73\x00\x00\x00\x00\x00\x00\
             \x00\x00\x50\x65\x72\x73\x6f\x6e\x61\x6c\x00\x00\x00\x00\x00\x00\
@@ -360,15 +334,15 @@ mod test {
             \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x4d\x61\x69\x6e\x00\x00\
             \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x50\x61\x67\x65\x72\x00\
             \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x4d\x6f\x62\x69\x6c\x65\
-            \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x17\x00\x00\x00"
-        ).as_bytes().to_vec()
+            \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x17\x00\x00\x00",
+        )
+        .as_bytes()
+        .to_vec()
     }
 
     fn get_address_app_info() -> AddressAppInfo {
         let mut address_app_info = AddressAppInfo::default();
-        address_app_info.category.renamed = [
-            0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0
-        ];
+        address_app_info.category.renamed = [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
         address_app_info.category.name = [
             String::from("Unfiled"),
             String::from("Business"),
@@ -385,12 +359,9 @@ mod test {
             String::from(""),
             String::from(""),
             String::from(""),
-            String::from("")
+            String::from(""),
         ];
-        address_app_info.category.id = [
-            0, 1, 2, 3, 17, 0, 0, 0,
-            0, 0, 0, 0,  0, 0, 0, 0
-        ];
+        address_app_info.category.id = [0, 1, 2, 3, 17, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
         address_app_info.category.last_unique_id = 17;
         address_app_info.labels = [
             String::from("Last name"),
@@ -414,12 +385,10 @@ mod test {
             String::from("Note"),
             String::from("Main"),
             String::from("Pager"),
-            String::from("Mobile")
+            String::from("Mobile"),
         ];
         address_app_info.label_renamed = [
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 512, 1024, 2048, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 512, 1024, 2048, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         ];
         address_app_info.phone_labels = [
             String::from("Work"),
@@ -429,7 +398,7 @@ mod test {
             String::from("E-mail"),
             String::from("Main"),
             String::from("Pager"),
-            String::from("Mobile")
+            String::from("Mobile"),
         ];
         address_app_info.country = 5888;
         address_app_info.sort_by_company = 0;
@@ -438,11 +407,14 @@ mod test {
     }
 
     fn get_address_record() -> Vec<u8> {
-        String::from("\
+        String::from(
+            "\
             \x00\x14\x32\x10\x00\x04\x41\x03\x00\x53\x68\x61\x77\x00\x42\x65\
             \x72\x6e\x61\x72\x64\x00\x4e\x6f\x6e\x65\x20\x6b\x6e\x6f\x77\x6e\
-            \x00\x43\x31\x00\x41\x20\x6e\x6f\x74\x65\x2e\x00"
-        ).as_bytes().to_vec()
+            \x00\x43\x31\x00\x41\x20\x6e\x6f\x74\x65\x2e\x00",
+        )
+        .as_bytes()
+        .to_vec()
     }
 
     fn get_address() -> Address {
@@ -468,7 +440,7 @@ mod test {
             String::from(""),
             String::from(""),
             String::from(""),
-            String::from("A note.")
+            String::from("A note."),
         ];
 
         address
@@ -478,7 +450,6 @@ mod test {
     fn test_unpack_address_app_info() {
         let address_app_block: &Vec<u8> = &get_address_app_block();
         let mai: &mut AddressAppInfo = &mut AddressAppInfo::default();
-        
         let l = unpack_address_app_info(mai, address_app_block, address_app_block.len() + 10);
         assert_eq!(l, address_app_block.len());
 
@@ -500,7 +471,10 @@ mod test {
         let address_app_block: &Vec<u8> = &get_address_app_block();
         let mai = &get_address_app_info();
         let now = SystemTime::now();
-        let seed = now.duration_since(UNIX_EPOCH).expect("Time went backward").as_millis() as u128;
+        let seed = now
+            .duration_since(UNIX_EPOCH)
+            .expect("Time went backward")
+            .as_millis() as u128;
 
         let l = pack_address_app_info(mai, buf, 0);
         assert_eq!(l, address_app_block.len());
@@ -509,12 +483,26 @@ mod test {
         reset_block(target, 8192, seed);
         let l = pack_address_app_info(mai, target, 1);
         assert_eq!(l, 0);
-        assert!(!check_block(9, target, 8192, 1, String::from("pack_address_app_info"), seed));
+        assert!(!check_block(
+            9,
+            target,
+            8192,
+            1,
+            String::from("pack_address_app_info"),
+            seed
+        ));
 
         reset_block(target, 8192, seed);
         let l = pack_address_app_info(mai, target, 8192 - 256);
         assert_eq!(l, address_app_block.len());
-        assert!(!check_block(9, target, 8192, l, String::from("pack_address_app_info"), seed));
+        assert!(!check_block(
+            9,
+            target,
+            8192,
+            l,
+            String::from("pack_address_app_info"),
+            seed
+        ));
 
         for i in 0..address_app_block.len() {
             assert_eq!(target[i], address_app_block[i]);
@@ -535,7 +523,10 @@ mod test {
         let address_record = get_address_record();
         let address = get_address();
 
-        assert_eq!(pack_address(&address, record_buffer, AddressType::AddressV1), 0);
+        assert_eq!(
+            pack_address(&address, record_buffer, AddressType::AddressV1),
+            0
+        );
         assert_eq!(record_buffer.len(), address_record.len());
         for i in 0..address_record.len() {
             assert_eq!(record_buffer[i], address_record[i]);

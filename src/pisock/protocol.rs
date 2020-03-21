@@ -1,51 +1,105 @@
-use super::Data;
-use super::socket::{
-    Socket,
-    SocketList,
-    find_socket
-};
+use errno::{set_errno, Errno};
 
-#[derive(PartialEq, FromPrimitive)]
+use super::Error;
+use super::socket::{find_socket, Socket};
+
+#[derive(Clone, Copy, PartialEq)]
 pub enum OptLevels {
-	PI_LEVEL_DEV,			// Device level
-	PI_LEVEL_SLP,			// Serial link protocol level
-	PI_LEVEL_PADP,			// PADP protocol level
-	PI_LEVEL_NET,			// NET protocol level
-	PI_LEVEL_SYS,			// System protocol level
-	PI_LEVEL_CMP,			// CMP protocol level
-	PI_LEVEL_DLP,			// Desktop link protocol level
-	PI_LEVEL_SOCK			// Socket level
+    LevelDev,  // Device level
+    LevelSLP,  // Serial link protocol level
+    LevelPADP, // PADP protocol level
+    LevelNet,  // NET protocol level
+    LevelSys,  // System protocol level
+    LevelCMP,  // CMP protocol level
+    LevelDLP,  // Desktop link protocol level
+    LevelSock, // Socket level
 }
 
-#[derive(Clone, Copy)]
-pub struct Protocol<T: Data> {
-    pub level: i64,
-    pub data: T,
-	pub read: fn(&Socket<T>, &mut Vec<u8>, usize, i64) -> i128,
-    pub write: fn(&mut Socket<T>, &Vec<u8>, usize, i64) -> i128,
-    pub flush: fn(&Socket<T>, i64) -> i64,
-    pub get_sock_opt: fn(&Socket<T>, i64, i64, &mut T, usize) -> i64,
-    pub set_sock_opt: fn(&Socket<T>, i64, i64, &T, usize) -> i64
+#[derive(Clone)]
+pub struct Data {
+    // CMP
+    pub cmp_data_type: u8,
+    pub cmp_flags: u8,
+    pub cmp_version: u16,
+    pub cmp_baudrate: u64,
 }
 
-pub fn get_protocol<T: Data>(sd: i64, level: OptLevels) -> Option<Protocol<T>> {
-    match find_socket::<T>(sd) {
-        Some(x) => protocol_queue_find::<T>(&x, level),
-        None => None
+#[derive(Clone)]
+pub struct Protocol {
+    pub level: OptLevels,
+    pub data: Data,
+    pub read: fn(&Socket, &mut Vec<u8>, usize, i64) -> i128,
+    pub write: fn(&mut Socket, &Vec<u8>, usize, i64) -> i128,
+    pub flush: fn(&Socket, i64) -> i64,
+    pub get_sock_opt: fn(&Socket, i64, i64, &mut Data, usize) -> i64,
+    pub set_sock_opt: fn(&Socket, i64, i64, &Data, usize) -> i64,
+}
+
+pub fn get_protocol(sd: i64, level: OptLevels) -> Option<Protocol> {
+    match find_socket(sd) {
+        Some(x) => protocol_queue_find(&x, level),
+        None => {
+            set_errno(Errno(Error::ESRCH as i32));
+            None
+        },
     }
 }
 
-pub fn protocol_queue_find<T: Data>(ps: &Socket<T>, level: OptLevels) -> Option<Protocol<T>> {
+pub fn get_protocol_next (sd: i64, level: OptLevels) -> Option<Protocol> {
+    match find_socket(sd) {
+        Some(x) => protocol_queue_find_next(&x, level),
+        None => {
+            set_errno(Errno(Error::ESRCH as i32));
+            None
+        },
+    }
+}
+
+pub fn protocol_queue_find(ps: &Socket, level: OptLevels) -> Option<Protocol> {
     if ps.command != 0 {
         for i in 0..ps.cmd_len {
-            if ps.cmd_queue[i].level == level as i64 {
-                return Some(ps.cmd_queue[i])
+            if ps.cmd_queue[i].level == level {
+                return Some(ps.cmd_queue[i].clone());
             }
         }
     } else {
         for i in 0..ps.queue_len {
-            if ps.protocol_queue[i].level == level as i64 {
-                return Some(ps.protocol_queue[i])
+            if ps.protocol_queue[i].level == level {
+                return Some(ps.protocol_queue[i].clone());
+            }
+        }
+    }
+
+    None
+}
+
+pub fn protocol_queue_find_next(ps: &Socket, level: OptLevels) -> Option<Protocol> {
+    if ps.command != 0 && ps.cmd_len == 0 {
+        return None
+    }
+
+    if ps.command == 0 && ps.queue_len == 0 {
+        return None
+    }
+
+    if ps.command != 0 && level == OptLevels::LevelDev {
+        return Some(ps.cmd_queue[0].clone())
+    }
+
+    if ps.command == 0 && level == OptLevels::LevelDev {
+        return Some(ps.protocol_queue[0].clone())
+    }
+
+    if ps.command != 0 {
+        for i in 0..(ps.cmd_len - 1) {
+            if ps.cmd_queue[i].level == level {
+                return Some(ps.cmd_queue[i + 1].clone());
+            }
+        }
+    } else {
+        for i in 0..(ps.queue_len - 1) {
+            if ps.protocol_queue[i].level == level {
+                return Some(ps.protocol_queue[i + 1].clone());
             }
         }
     }

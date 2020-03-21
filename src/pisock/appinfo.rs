@@ -1,7 +1,4 @@
-use super::{
-    get_short,
-    set_short
-};
+use super::{get_short, set_short};
 use std::str;
 
 #[derive(Default, Debug, PartialEq)]
@@ -12,11 +9,7 @@ pub struct CategoryAppInfo {
     pub last_unique_id: u8,
 }
 
-pub fn unpack_category_app_info(
-    ai: &mut CategoryAppInfo,
-    record: &Vec<u8>,
-    len: usize,
-) -> usize {
+pub fn unpack_category_app_info(ai: &mut CategoryAppInfo, record: &Vec<u8>, len: usize) -> usize {
     let rec: u16;
     let mut record_offset: usize = 0;
 
@@ -64,11 +57,7 @@ pub fn unpack_category_app_info(
     2 + 16 * 16 + 16 + 4
 }
 
-pub fn pack_category_app_info(
-    ai: &CategoryAppInfo,
-    record: &mut Vec<u8>,
-    len: usize,
-) -> usize {
+pub fn pack_category_app_info(ai: &CategoryAppInfo, record: &mut Vec<u8>, len: usize) -> usize {
     let mut rec: u16;
     let mut record_offset: usize = 0;
 
@@ -126,11 +115,12 @@ pub fn pack_category_app_info(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::pisock::{reset_block, check_block};
+    use crate::pisock::{check_block, reset_block};
     use std::time::{SystemTime, UNIX_EPOCH};
 
     fn get_category_app_block() -> Vec<u8> {
-        String::from("\
+        String::from(
+            "\
             \x00\x10\x55\x6e\x66\x69\x6c\x65\x64\x00\x00\x00\x00\x00\x00\x00\
             \x00\x00\x42\x75\x73\x69\x6e\x65\x73\x73\x00\x00\x00\x00\x00\x00\
             \x00\x00\x50\x65\x72\x73\x6f\x6e\x61\x6c\x00\x00\x00\x00\x00\x00\
@@ -148,15 +138,15 @@ mod test {
             \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\
             \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\
             \x00\x00\x00\x01\x02\x03\x11\x00\x00\x00\x00\x00\x00\x00\x00\x00\
-            \x00\x00\x11\x00\x00\x00"
-        ).as_bytes().to_vec()
+            \x00\x00\x11\x00\x00\x00",
+        )
+        .as_bytes()
+        .to_vec()
     }
 
     fn get_category_app_info() -> CategoryAppInfo {
         let mut category_app_info = CategoryAppInfo::default();
-        category_app_info.renamed = [
-            0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0
-        ];
+        category_app_info.renamed = [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
         category_app_info.name = [
             String::from("Unfiled"),
             String::from("Business"),
@@ -173,12 +163,9 @@ mod test {
             String::from(""),
             String::from(""),
             String::from(""),
-            String::from("")
+            String::from(""),
         ];
-        category_app_info.id = [
-            0, 1, 2, 3, 17, 0, 0, 0,
-            0, 0, 0, 0,  0, 0, 0, 0
-        ];
+        category_app_info.id = [0, 1, 2, 3, 17, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
         category_app_info.last_unique_id = 17;
 
         category_app_info
@@ -188,7 +175,6 @@ mod test {
     fn test_unpack_category_app_info() {
         let category_app_block: &Vec<u8> = &get_category_app_block();
         let mci: &mut CategoryAppInfo = &mut CategoryAppInfo::default();
-        
         let l = unpack_category_app_info(mci, category_app_block, category_app_block.len() + 10);
         assert_eq!(l, category_app_block.len());
 
@@ -210,7 +196,10 @@ mod test {
         let category_app_block: &Vec<u8> = &get_category_app_block();
         let mci = &get_category_app_info();
         let now = SystemTime::now();
-        let seed = now.duration_since(UNIX_EPOCH).expect("Time went backward").as_millis() as u128;
+        let seed = now
+            .duration_since(UNIX_EPOCH)
+            .expect("Time went backward")
+            .as_millis() as u128;
 
         let l = pack_category_app_info(mci, buf, 0);
         assert_eq!(l, category_app_block.len());
@@ -219,12 +208,26 @@ mod test {
         reset_block(target, 8192, seed);
         let l = pack_category_app_info(mci, target, 1);
         assert_eq!(l, 0);
-        assert!(!check_block(9, target, 8192, 1, String::from("pack_category_app_info"), seed));
+        assert!(!check_block(
+            9,
+            target,
+            8192,
+            1,
+            String::from("pack_category_app_info"),
+            seed
+        ));
 
         reset_block(target, 8192, seed);
         let l = pack_category_app_info(mci, target, 8192 - 256);
         assert_eq!(l, category_app_block.len());
-        assert!(!check_block(9, target, 8192, l, String::from("pack_category_app_info"), seed));
+        assert!(!check_block(
+            9,
+            target,
+            8192,
+            l,
+            String::from("pack_category_app_info"),
+            seed
+        ));
 
         for i in 0..category_app_block.len() {
             assert_eq!(target[i], category_app_block[i]);
