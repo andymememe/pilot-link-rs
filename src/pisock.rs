@@ -11,10 +11,13 @@ use std::str;
 enum Error {
     ESRCH = 3,
     ENOMEM = 12,
+    EINVAL = 22
 }
 
 #[derive(Clone, Copy, PartialEq, FromPrimitive)]
 pub enum DLPErrorDefinitions {
+    ErrNoErr = 0,
+
     ErrProtAborted = -100,
     ErrProtIncompatible = -101,
     ErrProtBadpacket = -102,

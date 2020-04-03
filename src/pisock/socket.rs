@@ -1,6 +1,12 @@
 use errno::{set_errno, Errno};
+use std::mem::size_of;
 
-use super::protocol::Protocol;
+use super::protocol::{
+    Protocol,
+    Opt,
+    OptLevels,
+    protocol_queue_find
+};
 use super::{DLPErrorDefinitions, Error};
 
 use std::collections::LinkedList;
@@ -90,4 +96,54 @@ pub fn socket_set_error(sd: i32, error_code: DLPErrorDefinitions) -> DLPErrorDef
     }
 
     return error_code;
+}
+
+pub fn socket_set_sockopt(sd: i32, level: OptLevels, option_name: Opt, option_value: &Vec<i32>, option_len: usize) -> DLPErrorDefinitions {
+    let mut sock: Socket;
+    let prot: Protocol;
+
+    match find_socket(sd) {
+        Some(x) => {
+            sock = x;
+        }
+        None => {
+            set_errno(Errno(Error::ESRCH as i32));
+            return DLPErrorDefinitions::ErrSockInvalid;
+        }
+    }
+
+    if level == OptLevels::LevelSock {
+        match option_name {
+            Opt::SocketState => {
+                if option_len != size_of::<i32>() {
+                    set_errno(Errno(Error::EINVAL as i32));
+                    return DLPErrorDefinitions::ErrSockInvalid;
+                }
+                sock.socket_state = option_value[0];
+            }
+            Opt::SocketHonorRXTimeout => {
+                if option_len != size_of::<i32>() {
+                    set_errno(Errno(Error::EINVAL as i32));
+                    return DLPErrorDefinitions::ErrSockInvalid;
+                }
+                sock.honor_rx_to = option_value[0]
+            },
+            _ => {
+                set_errno(Errno(Error::EINVAL as i32));
+                return DLPErrorDefinitions::ErrSockInvalid;
+            }
+        }
+
+        return DLPErrorDefinitions::ErrNoErr;
+    }
+
+    match protocol_queue_find(&sock, level) {
+        Some(x) => prot = x,
+        None => {
+            set_errno(Errno(Error::EINVAL as i32));
+            return DLPErrorDefinitions::ErrSockInvalid;
+        }
+    }
+
+    (prot.set_sock_opt)(&sock, level, option_name, option_value, option_len)
 }

@@ -1,6 +1,6 @@
 use errno::{set_errno, Errno};
 
-use super::Error;
+use super::{Error, DLPErrorDefinitions};
 use super::socket::{find_socket, Socket};
 
 #[derive(Clone, Copy, PartialEq)]
@@ -13,6 +13,19 @@ pub enum OptLevels {
     LevelCMP,  // CMP protocol level
     LevelDLP,  // Desktop link protocol level
     LevelSock, // Socket level
+}
+
+#[derive(Clone, Copy, PartialEq)]
+pub enum Opt {
+    // PDAP
+    PADPType,
+    PADPLastType,
+    PADPFreezeTXID,
+    PADPUseLongFormat,
+
+    // Socket
+    SocketState,			// Socket state (listening, closed, etc.)
+	SocketHonorRXTimeout	// Set to 1 to honor timeouts when waiting for data. Set to 0 to disable timeout (i.e. during dlp_call_application)
 }
 
 #[derive(Clone)]
@@ -31,8 +44,8 @@ pub struct Protocol {
     pub read: fn(&Socket, &mut Vec<u8>, usize, i32) -> i64,
     pub write: fn(&mut Socket, &Vec<u8>, usize, i32) -> i64,
     pub flush: fn(&Socket, i32) -> i32,
-    pub get_sock_opt: fn(&Socket, OptLevels, i32, &mut Data, usize) -> i32,
-    pub set_sock_opt: fn(&Socket, OptLevels, i32, &Data, usize) -> i32,
+    pub get_sock_opt: fn(&Socket, OptLevels, Opt, &mut Vec<i32>, usize) -> i32,
+    pub set_sock_opt: fn(&Socket, OptLevels, Opt, &Vec<i32>, usize) -> DLPErrorDefinitions,
 }
 
 pub fn get_protocol(sd: i32, level: OptLevels) -> Option<Protocol> {
