@@ -53,8 +53,8 @@ pub struct Protocol {
     pub read: fn(&Socket, &mut Vec<u8>, usize, i32) -> DLPErrorDefinitions,
     pub write: fn(&mut Socket, &Vec<u8>, usize, i32) -> DLPErrorDefinitions,
     pub flush: fn(&Socket, i32) -> DLPErrorDefinitions,
-    pub get_sock_opt: fn(&Socket, OptLevels, Opt, &mut u64, &mut usize) -> DLPErrorDefinitions,
-    pub set_sock_opt: fn(&Socket, OptLevels, Opt, &u64, &mut usize) -> DLPErrorDefinitions,
+    pub get_sock_opt: fn(&Socket, OptLevels, Opt, &mut i64, &mut usize) -> DLPErrorDefinitions,
+    pub set_sock_opt: fn(&Socket, OptLevels, Opt, &i64, &mut usize) -> DLPErrorDefinitions,
 }
 
 pub fn get_protocol(sd: i32, level: OptLevels) -> Option<Protocol> {

@@ -86,9 +86,9 @@ fn cmp_rx(ps: &Socket, msg: &mut Vec<u8>, len: usize, flags: i32) -> DLPErrorDef
 }
 
 fn cmp_tx(sock: &mut Socket, _: &Vec<u8>, _: usize, flags: i32) -> DLPErrorDefinitions {
-    let cmp_type: Vec<i32>;
+    let cmp_type: i32;
     let error: DLPErrorDefinitions;
-    let size: usize;
+    let mut size: usize;
     let prot: Protocol;
     let next: Protocol;
     let data: Data;
@@ -111,9 +111,9 @@ fn cmp_tx(sock: &mut Socket, _: &Vec<u8>, _: usize, flags: i32) -> DLPErrorDefin
         }
     };
 
-    cmp_type = vec!(PAD_DATA);
+    cmp_type = PAD_DATA;
     size = size_of::<i32>();
-    socket_set_sockopt(sock.socket_descriptor, OptLevels::LevelPADP, Opt::PADPType, &cmp_type, size);
+    socket_set_sockopt(sock.socket_descriptor, OptLevels::LevelPADP, Opt::PADPType, &(cmp_type as i64), &mut size);
 
     cmp_buf[CMP_OFFSET_TYPE] = data.cmp_data_type;
     cmp_buf[CMP_OFFSET_FLGS] = data.cmp_flags;
@@ -161,11 +161,11 @@ fn cmp_getsockopt(
     sock: &Socket,
     level: OptLevels,
     option_name: Opt,
-    option_value: &mut u64,
+    option_value: &mut i64,
     option_len: &mut usize,
 ) -> DLPErrorDefinitions {
     let prot: Protocol;
-    let data: Data;
+    let mut data: Data;
 
     prot = match get_protocol(sock.socket_descriptor, OptLevels::LevelCMP) {
         Some(x) => x,
@@ -205,7 +205,7 @@ fn cmp_getsockopt(
                 set_errno(Errno(Error::EINVAL as i32));
                 return socket_set_error(sock.socket_descriptor, DLPErrorDefinitions::ErrGenericArgument);
             }
-            data.cmp_baudrate = *option_value;
+            data.cmp_baudrate = *option_value as u64;
             *option_len = size_of::<u64>();
         }
     };
@@ -217,11 +217,11 @@ fn cmp_setsockopt(
     sock: &Socket,
     level: OptLevels,
     option_name: Opt,
-    option_value: &u64,
+    option_value: &i64,
     option_len: &mut usize,
 ) -> DLPErrorDefinitions {
     let prot: Protocol;
-    let data: Data;
+    let mut data: Data;
     
     prot = match get_protocol(sock.socket_descriptor, OptLevels::LevelCMP) {
         Some(x) => x,

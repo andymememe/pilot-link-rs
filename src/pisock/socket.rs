@@ -98,7 +98,7 @@ pub fn socket_set_error(sd: i32, error_code: DLPErrorDefinitions) -> DLPErrorDef
     return error_code;
 }
 
-pub fn socket_set_sockopt(sd: i32, level: OptLevels, option_name: Opt, option_value: &Vec<i32>, option_len: usize) -> DLPErrorDefinitions {
+pub fn socket_set_sockopt(sd: i32, level: OptLevels, option_name: Opt, option_value: &i64, option_len: &mut usize) -> DLPErrorDefinitions {
     let mut sock: Socket;
     let prot: Protocol;
 
@@ -115,18 +115,18 @@ pub fn socket_set_sockopt(sd: i32, level: OptLevels, option_name: Opt, option_va
     if level == OptLevels::LevelSock {
         match option_name {
             Opt::SocketState => {
-                if option_len != size_of::<i32>() {
+                if *option_len != size_of::<i32>() {
                     set_errno(Errno(Error::EINVAL as i32));
                     return DLPErrorDefinitions::ErrSockInvalid;
                 }
-                sock.socket_state = option_value[0];
+                sock.socket_state = *option_value as i32;
             }
             Opt::SocketHonorRXTimeout => {
-                if option_len != size_of::<i32>() {
+                if *option_len != size_of::<i32>() {
                     set_errno(Errno(Error::EINVAL as i32));
                     return DLPErrorDefinitions::ErrSockInvalid;
                 }
-                sock.honor_rx_to = option_value[0]
+                sock.honor_rx_to = *option_value as i32
             },
             _ => {
                 set_errno(Errno(Error::EINVAL as i32));
