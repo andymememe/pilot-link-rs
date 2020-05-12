@@ -25,7 +25,13 @@ pub enum Opt {
 
     // Socket
     SocketState,			// Socket state (listening, closed, etc.)
-	SocketHonorRXTimeout	// Set to 1 to honor timeouts when waiting for data. Set to 0 to disable timeout (i.e. during dlp_call_application)
+    SocketHonorRXTimeout,	// Set to 1 to honor timeouts when waiting for data. Set to 0 to disable timeout (i.e. during dlp_call_application)
+
+    // CMP
+	CMPType,
+	CMPFlags,
+	CMPVers,
+	CMPBaud
 }
 
 #[derive(Clone)]
@@ -35,17 +41,20 @@ pub struct Data {
     pub cmp_flags: u8,
     pub cmp_version: u16,
     pub cmp_baudrate: u64,
+
+    // PADP
+    pub padp_data_type: u8,
 }
 
 #[derive(Clone)]
 pub struct Protocol {
     pub level: OptLevels,
     pub data: Data,
-    pub read: fn(&Socket, &mut Vec<u8>, usize, i32) -> i64,
-    pub write: fn(&mut Socket, &Vec<u8>, usize, i32) -> i64,
-    pub flush: fn(&Socket, i32) -> i32,
-    pub get_sock_opt: fn(&Socket, OptLevels, Opt, &mut Vec<i32>, usize) -> i32,
-    pub set_sock_opt: fn(&Socket, OptLevels, Opt, &Vec<i32>, usize) -> DLPErrorDefinitions,
+    pub read: fn(&Socket, &mut Vec<u8>, usize, i32) -> DLPErrorDefinitions,
+    pub write: fn(&mut Socket, &Vec<u8>, usize, i32) -> DLPErrorDefinitions,
+    pub flush: fn(&Socket, i32) -> DLPErrorDefinitions,
+    pub get_sock_opt: fn(&Socket, OptLevels, Opt, &mut u64, &mut usize) -> DLPErrorDefinitions,
+    pub set_sock_opt: fn(&Socket, OptLevels, Opt, &u64, &mut usize) -> DLPErrorDefinitions,
 }
 
 pub fn get_protocol(sd: i32, level: OptLevels) -> Option<Protocol> {

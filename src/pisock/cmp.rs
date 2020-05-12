@@ -1,3 +1,4 @@
+use errno::{set_errno, Errno};
 use log::debug;
 use std::mem::size_of;
 
@@ -33,6 +34,7 @@ pub fn new_cmp_protocol() -> Protocol {
             cmp_flags: 0,
             cmp_version: 0,
             cmp_baudrate: 0,
+            padp_data_type: 0,
         },
         read: cmp_rx,
         write: cmp_tx,
@@ -42,8 +44,8 @@ pub fn new_cmp_protocol() -> Protocol {
     };
 }
 
-fn cmp_rx(ps: &Socket, msg: &mut Vec<u8>, len: usize, flags: i32) -> i64 {
-    let bytes: i64;
+fn cmp_rx(ps: &Socket, msg: &mut Vec<u8>, len: usize, flags: i32) -> DLPErrorDefinitions {
+    let error: DLPErrorDefinitions;
     let prot: Protocol;
     let next: Protocol;
     let mut data: Data;
@@ -54,7 +56,6 @@ fn cmp_rx(ps: &Socket, msg: &mut Vec<u8>, len: usize, flags: i32) -> i64 {
         Some(x) => x,
         None => {
             return socket_set_error(ps.socket_descriptor, DLPErrorDefinitions::ErrSockInvalid)
-                as i64
         }
     };
 
@@ -63,38 +64,34 @@ fn cmp_rx(ps: &Socket, msg: &mut Vec<u8>, len: usize, flags: i32) -> i64 {
         Some(x) => x,
         None => {
             return socket_set_error(ps.socket_descriptor, DLPErrorDefinitions::ErrSockInvalid)
-                as i64
         }
     };
 
-    bytes = (next.read)(ps, msg, len, flags);
-    if bytes < 10 {
+    error = (next.read)(ps, msg, len, flags);
+    if (error as i64) < 10 {
         let err: DLPErrorDefinitions;
-        if bytes < 0 {
-            err = match num::FromPrimitive::from_i64(bytes) {
-                Some(x) => x,
-                None => DLPErrorDefinitions::ErrProtAborted,
-            };
+        if (error as i64) < 0 {
+            err = error;
         } else {
             err = DLPErrorDefinitions::ErrProtAborted;
         }
-        return socket_set_error(ps.socket_descriptor, err) as i64;
+        return socket_set_error(ps.socket_descriptor, err);
     }
     data.cmp_data_type = msg[CMP_OFFSET_TYPE];
     data.cmp_flags = msg[CMP_OFFSET_FLGS];
     data.cmp_version = get_short(&msg[CMP_OFFSET_VERS..CMP_OFFSET_VERS + 2]);
     data.cmp_baudrate = get_long(&msg[CMP_OFFSET_BAUD..CMP_OFFSET_BAUD + 4]);
 
-    0
+    DLPErrorDefinitions::ErrNoErr
 }
 
-fn cmp_tx(sock: &mut Socket, buf: &Vec<u8>, len: usize, flags: i32) -> i64 {
-    let cmpType: Vec<i32>;
-    let bytes: i64;
+fn cmp_tx(sock: &mut Socket, _: &Vec<u8>, _: usize, flags: i32) -> DLPErrorDefinitions {
+    let cmp_type: Vec<i32>;
+    let error: DLPErrorDefinitions;
     let size: usize;
     let prot: Protocol;
     let next: Protocol;
-    let mut data: Data;
+    let data: Data;
     let mut cmp_buf: Vec<u8>;
 
     cmp_buf = Vec::with_capacity(CMP_HEADER_LEN);
@@ -103,7 +100,6 @@ fn cmp_tx(sock: &mut Socket, buf: &Vec<u8>, len: usize, flags: i32) -> i64 {
         Some(x) => x,
         None => {
             return socket_set_error(sock.socket_descriptor, DLPErrorDefinitions::ErrSockInvalid)
-                as i64
         }
     };
 
@@ -112,13 +108,12 @@ fn cmp_tx(sock: &mut Socket, buf: &Vec<u8>, len: usize, flags: i32) -> i64 {
         Some(x) => x,
         None => {
             return socket_set_error(sock.socket_descriptor, DLPErrorDefinitions::ErrSockInvalid)
-                as i64
         }
     };
 
-    cmpType = vec!(PAD_DATA);
+    cmp_type = vec!(PAD_DATA);
     size = size_of::<i32>();
-    socket_set_sockopt(sock.socket_descriptor, OptLevels::LevelPADP, Opt::PADPType, &cmpType, size);
+    socket_set_sockopt(sock.socket_descriptor, OptLevels::LevelPADP, Opt::PADPType, &cmp_type, size);
 
     cmp_buf[CMP_OFFSET_TYPE] = data.cmp_data_type;
     cmp_buf[CMP_OFFSET_FLGS] = data.cmp_flags;
@@ -130,38 +125,120 @@ fn cmp_tx(sock: &mut Socket, buf: &Vec<u8>, len: usize, flags: i32) -> i64 {
     set_short(&mut cmp_buf, CMP_OFFSET_RESV, 0);
     set_long(&mut cmp_buf, CMP_OFFSET_BAUD, data.cmp_baudrate);
 
-    bytes = (next.write)(sock, &cmp_buf, CMP_HEADER_LEN, flags);
-    if bytes < 10 {
-        if bytes < 0 {
-            return bytes
+    error = (next.write)(sock, &cmp_buf, CMP_HEADER_LEN, flags);
+    if (error as i64) < 10 {
+        if (error as i64) < 0 {
+            return error
         } else {
-            return socket_set_error(sock.socket_descriptor, DLPErrorDefinitions::ErrProtAborted) as i64;
+            return socket_set_error(sock.socket_descriptor, DLPErrorDefinitions::ErrProtAborted);
         }
     }
 
-    0
+    DLPErrorDefinitions::ErrNoErr
 }
 
-fn cmp_flush(ps: &Socket, flags: i32) -> i32 {
-    0
+fn cmp_flush(sock: &Socket, flags: i32) -> DLPErrorDefinitions {
+	let next: Protocol;
+
+    match get_protocol(sock.socket_descriptor, OptLevels::LevelCMP) {
+        Some(x) => x,
+        None => {
+            return socket_set_error(sock.socket_descriptor, DLPErrorDefinitions::ErrSockInvalid)
+        }
+    };
+
+    next = match get_protocol_next(sock.socket_descriptor, OptLevels::LevelCMP) {
+        Some(x) => x,
+        None => {
+            return socket_set_error(sock.socket_descriptor, DLPErrorDefinitions::ErrSockInvalid)
+        }
+    };
+
+	return (next.flush)(sock, flags);
 }
 
 fn cmp_getsockopt(
-    ps: &Socket,
+    sock: &Socket,
     level: OptLevels,
     option_name: Opt,
-    option_value: &mut Vec<i32>,
-    option_len: usize,
-) -> i32 {
-    0
+    option_value: &mut u64,
+    option_len: &mut usize,
+) -> DLPErrorDefinitions {
+    let prot: Protocol;
+    let data: Data;
+
+    prot = match get_protocol(sock.socket_descriptor, OptLevels::LevelCMP) {
+        Some(x) => x,
+        None => {
+            return socket_set_error(sock.socket_descriptor, DLPErrorDefinitions::ErrSockInvalid)
+        }
+    };
+    data = prot.data;
+
+    match option_name {
+        CMPType => {
+            if *option_len != size_of::<u8>() {
+                set_errno(Errno(Error::EINVAL as i32));
+                return socket_set_error(sock.socket_descriptor, DLPErrorDefinitions::ErrGenericArgument);
+            }
+            data.cmp_data_type = *option_value as u8;
+            *option_len = size_of::<u8>();
+        },
+        CMPFlags => {
+            if *option_len != size_of::<u8>() {
+                set_errno(Errno(Error::EINVAL as i32));
+                return socket_set_error(sock.socket_descriptor, DLPErrorDefinitions::ErrGenericArgument);
+            }
+            data.cmp_flags = *option_value as u8;
+            *option_len = size_of::<u8>();
+        },
+        CMPVers => {
+            if *option_len != size_of::<u16>() {
+                set_errno(Errno(Error::EINVAL as i32));
+                return socket_set_error(sock.socket_descriptor, DLPErrorDefinitions::ErrGenericArgument);
+            }
+            data.cmp_version = *option_value as u16;
+            *option_len = size_of::<u16>();
+        },
+        CMPBaud => {
+            if *option_len != size_of::<u64>() {
+                set_errno(Errno(Error::EINVAL as i32));
+                return socket_set_error(sock.socket_descriptor, DLPErrorDefinitions::ErrGenericArgument);
+            }
+            data.cmp_baudrate = *option_value;
+            *option_len = size_of::<u64>();
+        }
+    };
+
+	DLPErrorDefinitions::ErrNoErr
 }
 
 fn cmp_setsockopt(
-    ps: &Socket,
+    sock: &Socket,
     level: OptLevels,
     option_name: Opt,
-    option_value: &Vec<i32>,
-    option_len: usize,
+    option_value: &u64,
+    option_len: &mut usize,
 ) -> DLPErrorDefinitions {
+    let prot: Protocol;
+    let data: Data;
+    
+    prot = match get_protocol(sock.socket_descriptor, OptLevels::LevelCMP) {
+        Some(x) => x,
+        None => {
+            return socket_set_error(sock.socket_descriptor, DLPErrorDefinitions::ErrSockInvalid)
+        }
+    };
+    data = prot.data;
+
+	if option_name == Opt::PADPType {
+        if *option_len != size_of::<u8>() {
+            set_errno(Errno(Error::EINVAL as i32));
+            return socket_set_error(sock.socket_descriptor, DLPErrorDefinitions::ErrGenericArgument);
+        }
+        data.padp_data_type = *option_value as u8;
+        *option_len = size_of::<u8>();
+	}
+
     DLPErrorDefinitions::ErrNoErr
 }
