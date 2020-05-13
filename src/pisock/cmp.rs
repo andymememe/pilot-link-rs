@@ -30,11 +30,10 @@ pub fn new_cmp_protocol() -> Protocol {
     return Protocol {
         level: OptLevels::LevelDev,
         data: Data {
-            cmp_data_type: 0,
+            data_type: 0,
             cmp_flags: 0,
             cmp_version: 0,
             cmp_baudrate: 0,
-            padp_data_type: 0,
         },
         read: cmp_rx,
         write: cmp_tx,
@@ -77,7 +76,7 @@ fn cmp_rx(ps: &Socket, msg: &mut Vec<u8>, len: usize, flags: i32) -> DLPErrorDef
         }
         return socket_set_error(ps.socket_descriptor, err);
     }
-    data.cmp_data_type = msg[CMP_OFFSET_TYPE];
+    data.data_type = msg[CMP_OFFSET_TYPE];
     data.cmp_flags = msg[CMP_OFFSET_FLGS];
     data.cmp_version = get_short(&msg[CMP_OFFSET_VERS..CMP_OFFSET_VERS + 2]);
     data.cmp_baudrate = get_long(&msg[CMP_OFFSET_BAUD..CMP_OFFSET_BAUD + 4]);
@@ -115,7 +114,7 @@ fn cmp_tx(sock: &mut Socket, _: &Vec<u8>, _: usize, flags: i32) -> DLPErrorDefin
     size = size_of::<i32>();
     socket_set_sockopt(sock.socket_descriptor, OptLevels::LevelPADP, Opt::PADPType, &(cmp_type as i64), &mut size);
 
-    cmp_buf[CMP_OFFSET_TYPE] = data.cmp_data_type;
+    cmp_buf[CMP_OFFSET_TYPE] = data.data_type;
     cmp_buf[CMP_OFFSET_FLGS] = data.cmp_flags;
     if data.cmp_version > CMP_VERSION {
         set_short(&mut cmp_buf, CMP_OFFSET_VERS, CMP_VERSION)
@@ -181,7 +180,7 @@ fn cmp_getsockopt(
                 set_errno(Errno(Error::EINVAL as i32));
                 return socket_set_error(sock.socket_descriptor, DLPErrorDefinitions::ErrGenericArgument);
             }
-            data.cmp_data_type = *option_value as u8;
+            data.data_type = *option_value as u8;
             *option_len = size_of::<u8>();
         },
         CMPFlags => {
@@ -236,7 +235,7 @@ fn cmp_setsockopt(
             set_errno(Errno(Error::EINVAL as i32));
             return socket_set_error(sock.socket_descriptor, DLPErrorDefinitions::ErrGenericArgument);
         }
-        data.padp_data_type = *option_value as u8;
+        data.data_type = *option_value as u8;
         *option_len = size_of::<u8>();
 	}
 

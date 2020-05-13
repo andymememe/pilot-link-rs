@@ -28,22 +28,21 @@ pub enum Opt {
     SocketHonorRXTimeout,	// Set to 1 to honor timeouts when waiting for data. Set to 0 to disable timeout (i.e. during dlp_call_application)
 
     // CMP
-	CMPType,
-	CMPFlags,
-	CMPVers,
-	CMPBaud
+    CMPType,
+    CMPFlags,
+    CMPVers,
+    CMPBaud
 }
 
 #[derive(Clone)]
 pub struct Data {
+    // Common
+    pub data_type: u8,
+    
     // CMP
-    pub cmp_data_type: u8,
     pub cmp_flags: u8,
     pub cmp_version: u16,
     pub cmp_baudrate: u64,
-
-    // PADP
-    pub padp_data_type: u8,
 }
 
 #[derive(Clone)]
