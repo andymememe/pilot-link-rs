@@ -3,6 +3,7 @@ pub mod appinfo;
 pub mod blob;
 pub mod calendar;
 pub mod cmp;
+pub mod padp;
 pub mod protocol;
 pub mod socket;
 
@@ -10,8 +11,10 @@ use std::str;
 
 enum Error {
     ESRCH = 3,
+    EIO = 5,
     ENOMEM = 12,
-    EINVAL = 22
+    EINVAL = 22,
+    ECONNREFUSED = 107,
 }
 
 #[derive(Clone, Copy, PartialEq, FromPrimitive)]
