@@ -6,20 +6,20 @@ pub struct GenericPacket {
     pub transaction_id: i8
 }
 
-pub fn new(data: Vec<i8>, srcSocket: i8, destSock: i8) -> GenericPacket {
+pub fn new(data: Vec<i8>, src_socket: i8, dest_sock: i8) -> GenericPacket {
     GenericPacket{
         data: data,
-        source: srcSocket,
-        destination: destSock,
+        source: src_socket,
+        destination: dest_sock,
         transaction_id: 0,
     }
 }
 
-pub fn new_with_transid(data: Vec<i8>, srcSocket: i8, destSock: i8, transID: i8) -> GenericPacket {
+pub fn new_with_transid(data: Vec<i8>, src_socket: i8, dest_sock: i8, trans_id: i8) -> GenericPacket {
     GenericPacket{
         data: data,
-        source: srcSocket,
-        destination: destSock,
-        transaction_id: transID,
+        source: src_socket,
+        destination: dest_sock,
+        transaction_id: trans_id,
     }
 }
