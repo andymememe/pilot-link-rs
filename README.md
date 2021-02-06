@@ -1,2 +1,2 @@
 # pilot-link-rs
-Rust port of Pilot-Link, a HotSync toolset for Palm OS PDA.
+A HotSync toolset for Palm OS PDA written with Rust.
