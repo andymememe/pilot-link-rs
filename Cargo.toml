@@ -9,5 +9,7 @@ name = "pilot_link"
 path = "src/lib.rs"
 
 [dependencies]
-log = "0.4.8"
-errno = "0.2.4"
+log = "0.4.14"
+errno = "0.2.7"
+serde = "1.0.123"
+serde_derive = "1.0.123" 
