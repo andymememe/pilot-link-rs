@@ -1,4 +1,3 @@
-use super::cmp_dlp::CMPDLPTransfer;
 use super::packet_timer::PacketTimer;
 use super::slp::SLP;
 
