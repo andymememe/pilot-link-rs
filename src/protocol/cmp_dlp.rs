@@ -164,9 +164,75 @@ impl<'a> CMPDLP<'a> {
 
     /// A method to cause the protocol stack issue a disconnect request
     /// with the specified disconnect reason code.
+    /// 
+    /// # Parameter
+    /// 
+    /// * `c`: The reason code for the disconnect.
     pub fn disconnect_with_reason(&self, reason: char) {
         // TODO: Implement
     }
+
+    // TODO: public DLP_Packet getDLPPacket(DLP_Packet dlp_packet)
+
+    /// Retreives the speed of the connection.
+    /// This value is only valid for serial based connections.
+    /// Other connections will return the default speed value of 9600bps, 
+    /// and should be ignored.
+    /// 
+    /// # Return
+    /// 
+    /// The speed of the serial connection.
+    pub fn get_speed(&self) -> u32 {
+        self.speed
+    }
+
+
+    /// Returns the connection status of this protocol layer.
+    /// 
+    /// # Return
+    /// 
+    /// `true` if we're connected to the remote device still, `false` otherwise.
+    pub fn is_connected(&self) -> bool {
+        self.connected
+    }
+
+    /// Sets the speed that this protocol should attempt to use for serial synchronization sessions.
+    /// This method has no effect for non-serial synchronization.
+    ///
+    /// # Parameters
+    /// 
+    /// * `new_value`: The speed that the synchronization should be attempted at.
+    pub fn set_speed(&mut self, new_value: u32) {
+        self.speed = new_value
+    }
+
+    /// Suspends the synchronization.
+    /// Calling this method closes down the current synchronization session,
+    /// while leaving the protocol stack in tact so it can begin another 
+    /// synchronization session as soon as this method returns.
+    /// This method will also attempt to suspend the protocol layer beneath it.
+    pub fn suspend(&self) {
+        // TODO: byte data[][] = {{0, 0}};
+
+        if !self.connected {
+            return
+        }
+
+        /* TODO: DLP_Packet dlp_packet = new DLP_Packet((byte)DLP_Packet.END_OF_SYNC, data);
+        dlp_packet.hostSocket = 3;
+        dlp_packet.serverSocket = 3;
+
+        try {
+            getDLPPacket(dlp_packet);
+        } catch(DLPError ex) {}
+        
+        connected = false;
+        padpHandler.suspendConnection(); */
+    }
+
+    // TODO: public byte[] readRawPacket() throws NotConnectedException {
+
+    // TODO: public void writeRawPacket(byte[] data, byte srcSocket, byte destSocket) throws NotConnectedException {
 
     /// Connection function for PADP
     fn padp_connect(&self) {
