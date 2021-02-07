@@ -142,13 +142,14 @@ impl<'a> CMPDLP<'a> {
     /// This method will block until a connection is initiated,
     /// so it's safe to call and wait until a connection occurs.
     pub fn connect(&mut self) {
-        if self.padp_handler.is_connected() {
-            &self.connect();
+        if !self.padp_handler.is_connected() {
+            &self.padp_handler.connect();
         }
 
         if type_of(&self.padp_handler) == type_name::<PADP>() {
-            self.padp_connect()
+            self.padp_rx_handshake();
         } else if type_of(&self.padp_handler) == "USB" { // TODO: Use type_name
+            self.usb_rx_handshake();
         }
 
         self.connected = true;
@@ -230,7 +231,7 @@ impl<'a> CMPDLP<'a> {
     // TODO: public void writeRawPacket(byte[] data, byte srcSocket, byte destSocket) throws NotConnectedException {
 
     /// Connection function for PADP
-    fn padp_connect(&self) {
+    fn padp_rx_handshake(&self) {
         let mut flags: u8 = 0;
         let mut pkt: GenericPacket;
         let cmp_pkt: CMPPacket;
@@ -263,14 +264,11 @@ impl<'a> CMPDLP<'a> {
             flags: flags,
             major_version: 0,
             minor_version: 0,
-            baud_rate: self.speed
-        }.packet_to_bytes();
+            baud_rate: self.speed,
+        }
+        .packet_to_bytes();
 
-        self.padp_handler.transmit_packet(
-            &cmp_pkt_init,
-            3,
-            3,
-        )
+        self.padp_handler.transmit_packet(&cmp_pkt_init, 3, 3)
     }
 
     /// USB Receive Handshake.
