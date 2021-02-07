@@ -46,33 +46,33 @@ pub trait CMPDLPTransferTrait {
     fn suspend_connection(&self);
 
     /// Tests the state of the protocol connection.
-    /// 
+    ///
     /// # Return
-    /// 
+    ///
     /// `true` if this protocol layer is connected, `false` otherwise.
     fn is_connected(&self) -> bool;
 
     /// Sets the use of long packets.
-    /// 
+    ///
     /// # Parameters
-    /// 
+    ///
     /// * `flag`: `true` if we should use long packet support, `false` otherwise.
     fn use_long_packets(&self, flag: bool);
 
     /// Reads a packet from the underlying communication subsystem.
-    /// 
+    ///
     /// # Return
-    /// 
+    ///
     /// A `GenericPacket` object containing the read data.
     fn read_packet(&self) -> GenericPacket;
 
     /// Transmits a packet to the underlying communication subsystem.
-    /// 
+    ///
     /// # Parameters
     /// * `data`: The data to transmit.
     /// * `src_socket`: The socket that was the source of this data (may be ignored).
     /// * `dest_socket`: The socket that is the intended destination of this data (may be ignored).
-    fn transmit_packet(&self, data: Vec<u8>, src_socket: i8, dest_sock: i8);
+    fn transmit_packet(&self, data: &Vec<u8>, src_socket: i8, dest_sock: i8);
 }
 
 /// CMP Packet Trait
@@ -122,12 +122,12 @@ pub struct CMPPacket {
 }
 
 /// DLP Version
-/// 
+///
 /// A class for handling DLP's Version information block format.
-/// 
-/// This class holds version information, and can convert to and from 
+///
+/// This class holds version information, and can convert to and from
 /// DLP version information and Java primitive types.
-/// 
+///
 /// The Palm uses a four byte format for storing version information in a
 /// `major_version.minor_version` format.
 #[derive(Serialize, Deserialize)]
@@ -161,9 +161,9 @@ impl<'a> CMPDLP<'a> {
 
     /// A method to cause the protocol stack issue a disconnect request
     /// with the specified disconnect reason code.
-    /// 
+    ///
     /// # Parameter
-    /// 
+    ///
     /// * `c`: The reason code for the disconnect.
     pub fn disconnect_with_reason(&self, reason: char) {
         // TODO: Implement
@@ -173,21 +173,20 @@ impl<'a> CMPDLP<'a> {
 
     /// Retreives the speed of the connection.
     /// This value is only valid for serial based connections.
-    /// Other connections will return the default speed value of 9600bps, 
+    /// Other connections will return the default speed value of 9600bps,
     /// and should be ignored.
-    /// 
+    ///
     /// # Return
-    /// 
+    ///
     /// The speed of the serial connection.
     pub fn get_speed(&self) -> u32 {
         self.speed
     }
 
-
     /// Returns the connection status of this protocol layer.
-    /// 
+    ///
     /// # Return
-    /// 
+    ///
     /// `true` if we're connected to the remote device still, `false` otherwise.
     pub fn is_connected(&self) -> bool {
         self.connected
@@ -197,7 +196,7 @@ impl<'a> CMPDLP<'a> {
     /// This method has no effect for non-serial synchronization.
     ///
     /// # Parameters
-    /// 
+    ///
     /// * `new_value`: The speed that the synchronization should be attempted at.
     pub fn set_speed(&mut self, new_value: u32) {
         self.speed = new_value
@@ -205,14 +204,14 @@ impl<'a> CMPDLP<'a> {
 
     /// Suspends the synchronization.
     /// Calling this method closes down the current synchronization session,
-    /// while leaving the protocol stack in tact so it can begin another 
+    /// while leaving the protocol stack in tact so it can begin another
     /// synchronization session as soon as this method returns.
     /// This method will also attempt to suspend the protocol layer beneath it.
     pub fn suspend(&self) {
         // TODO: byte data[][] = {{0, 0}};
 
         if !self.connected {
-            return
+            return;
         }
 
         /* TODO: DLP_Packet dlp_packet = new DLP_Packet((byte)DLP_Packet.END_OF_SYNC, data);
@@ -222,7 +221,6 @@ impl<'a> CMPDLP<'a> {
         try {
             getDLPPacket(dlp_packet);
         } catch(DLPError ex) {}
-        
         connected = false;
         padpHandler.suspendConnection(); */
     }
@@ -260,8 +258,16 @@ impl<'a> CMPDLP<'a> {
             self.padp_handler.use_long_packets(false);
         }
 
+        let cmp_pkt_init = CMPPacket {
+            packet_type: CMP_INIT,
+            flags: flags,
+            major_version: 0,
+            minor_version: 0,
+            baud_rate: self.speed
+        }.packet_to_bytes();
+
         self.padp_handler.transmit_packet(
-            new_cmp_packet_with_settings(CMP_INIT, flags, 0, 0, self.speed).packet_to_bytes(),
+            &cmp_pkt_init,
             3,
             3,
         )
@@ -284,7 +290,6 @@ impl CMPPacket {
     pub const FLAG_TWO_MINUTE_TIMEOUT: u8 = 0x20;
     /// CMP Packet Flag: Long Packet Support
     pub const FLAG_LONG_PACKET_SUPPORT: u8 = 0x10;
-    
     // Other Constants
     /// Transaction ID for CMP Wake Up Packet
     pub const WAKEUP_TID: i8 = -1;
@@ -350,109 +355,15 @@ impl CMPPacketTrait for CMPPacket {
     ///
     /// The `CMPPacket` object containing the data from the byte array.
     fn bytes_to_packet(pkt: &Vec<u8>) -> CMPPacket {
-        let mut cmp_pkt = new_cmp_packet();
-        cmp_pkt.packet_type = pkt[0];
-        cmp_pkt.flags = pkt[1];
-        cmp_pkt.major_version = pkt[2];
-        cmp_pkt.minor_version = pkt[3];
-        cmp_pkt.baud_rate =
-            u32::from_be_bytes(pkt[6..=9].try_into().expect("Slice with incorrect length"));
-        cmp_pkt
-    }
-}
-
-/// Construct an instance of the `CMPDLP` class using
-/// the specified underlying `CMPDLPTransferTrait` protocol handler.
-///
-/// # Parameters
-///
-/// * `padp`: The `CMPDLPTransferTrait` protocol handler to use for I/O
-///
-/// # Return
-///
-/// A `CMPDLP` instance
-pub fn new_cmp_dlp<'a>(padp: &'a dyn CMPDLPTransferTrait) -> CMPDLP {
-    CMPDLP {
-        padp_handler: padp,
-        connected: false,
-        speed: CMPPacket::DEFAULT_SPEED,
-    }
-}
-
-/// Construct an instance of the `CMPPacket` class
-///
-/// # Return
-///
-/// A `CMPPacket` instance
-pub fn new_cmp_packet() -> CMPPacket {
-    CMPPacket {
-        packet_type: 0,
-        flags: 0,
-        major_version: 0,
-        minor_version: 0,
-        baud_rate: CMPPacket::DEFAULT_SPEED,
-    }
-}
-
-/// Construct an instance of the `CMPPacket` class with settings
-///
-/// # Parameters
-///
-/// * `pkt_type`: The CMP packets type.
-/// * `flags`: The flags to attach to this packet.
-/// * `major_version`: The major protocol version.
-/// * `minor_version`: The minor protocol version.
-/// * `baud`: The serial rate to use for serial synchronization.
-///
-/// # Return
-///
-/// A `CMPPacket` instance with settings
-pub fn new_cmp_packet_with_settings(
-    packet_type: u8,
-    flags: u8,
-    major_version: u8,
-    minor_version: u8,
-    baud: u32,
-) -> CMPPacket {
-    CMPPacket {
-        packet_type: packet_type,
-        flags: flags,
-        major_version: major_version,
-        minor_version: minor_version,
-        baud_rate: baud,
-    }
-}
-
-/// Construct an instance of the `DLPVersion` class as version 1.0.
-///
-/// # Parameters
-///
-/// * `pkt_type`: The CMP packets type.
-/// * `flags`: The flags to attach to this packet.
-/// * `major_version`: The major protocol version.
-/// * `minor_version`: The minor protocol version.
-/// * `baud`: The serial rate to use for serial synchronization.
-///
-/// # Return
-///
-/// A `DLPVersion` instance
-pub fn new_dlp_version() -> DLPVersion {
-    DLPVersion {
-        major_version: 1,
-        minor_version: 0
-    }
-}
-
-
-/// Construct a new DLPVersion object using the specified version information.
-///
-/// # Return
-///
-/// A `DLPVersion` instance with specified version
-pub fn new_dlp_version_with_settings(major_version: u8, minor_version: u8) -> DLPVersion {
-    DLPVersion {
-        major_version: major_version,
-        minor_version: minor_version
+        CMPPacket {
+            packet_type: pkt[0],
+            flags: pkt[1],
+            major_version: pkt[2],
+            minor_version: pkt[3],
+            baud_rate: u32::from_be_bytes(
+                pkt[6..=9].try_into().expect("Slice with incorrect length"),
+            ),
+        }
     }
 }
 
