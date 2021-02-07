@@ -5,10 +5,10 @@ use super::usb::USB;
 
 pub struct Hotsync<'a> {
     transport: Option<&'a dyn SLPTransportTrait>,
-    slp_handler: Option<SLP>,
-    padp_handler: Option<PADP<'a>>,
-    cmp_dlp_handler: Option<CMPDLP<'a>>,
-    usb_handler: Option<USB>
+    slp_handler: Option<&'a SLP>,
+    padp_handler: Option<&'a PADP<'a>>,
+    cmp_dlp_handler: Option<&'a CMPDLP<'a>>,
+    usb_handler: Option<&'a USB>
 }
 
 impl<'a> Hotsync<'a> {
