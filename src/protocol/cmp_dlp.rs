@@ -43,23 +43,53 @@ pub const FLAG_TWO_MINUTE_TIMEOUT: u8 = 0x20;
 pub const FLAG_LONG_PACKET_SUPPORT: u8 = 0x10;
 
 // Other Constants
-/// Wake Up Transaction ID
+/// Transaction ID for CMP Wake Up Packet
 pub const WAKEUP_TID: i8 = -1;
-/// Version Mismatch
+/// Version mismatched on either end of the synchronization
 pub const VERSION_MISMATCH: u8 = 0x80;
-/// Default Speed for Serial Connection
+/// Default speed for Serial connection
 pub const DEFAULT_SPEED: u32 = 9600;
 
 /// CMP / DLP Packet I/O Trait
 ///
 /// Defines functions of connection and transfering with CMP / DLP
 pub trait CMPDLPTransferTrait {
+    /// Method to be called to initialize the connection.
     fn connect(&self);
+
+    /// Disconnects the connection to the underlying communication subsystem.
     fn disconnect(&self);
+
+    /// Suspends access to the underlying communication subsystem.
     fn suspend_connection(&self);
+
+    /// Tests the state of the protocol connection.
+    /// 
+    /// # Return
+    /// 
+    /// `true` if this protocol layer is connected, `false` otherwise.
     fn is_connected(&self) -> bool;
+
+    /// Sets the use of long packets.
+    /// 
+    /// # Parameters
+    /// 
+    /// * `flag`: `true` if we should use long packet support, `false` otherwise.
     fn use_long_packets(&self, flag: bool);
+
+    /// Reads a packet from the underlying communication subsystem.
+    /// 
+    /// # Return
+    /// 
+    /// A `GenericPacket` object containing the read data.
     fn read_packet(&self) -> GenericPacket;
+
+    /// Transmits a packet to the underlying communication subsystem.
+    /// 
+    /// # Parameters
+    /// * `data`: The data to transmit.
+    /// * `src_socket`: The socket that was the source of this data (may be ignored).
+    /// * `dest_socket`: The socket that is the intended destination of this data (may be ignored).
     fn transmit_packet(&self, data: Vec<u8>, src_socket: i8, dest_sock: i8);
 }
 
@@ -67,15 +97,29 @@ pub trait CMPDLPTransferTrait {
 ///
 /// Defines CMPPacket converter
 pub trait CMPPacketTrait {
+    /// Converts this packet to a byte array, suitable for transmission.
+    ///
+    /// # Return
+    ///
+    /// An array of bytes containing the byte representation of this packet object.
     fn packet_to_bytes(&self) -> Vec<u8>;
+
+    /// Convert an array of bytes containing a valid CMP packet into an instance of `CMPPacket`.
+    ///
+    /// # Parameters
+    ///
+    /// * `pkt`: The byte array containing a CMP packet to convert.
+    ///
+    /// # Return
+    ///
+    /// The `CMPPacket` object containing the data from the byte array.
     fn bytes_to_packet(pkt: &Vec<u8>) -> Self;
 }
 
-
 /// CMP / DLP protocol
-/// 
-/// A `CMPDLP` contains PADP handler, connected state and 
-/// speed of serial connection (default speed is 9600, 
+///
+/// A `CMPDLP` contains PADP handler, connected state and
+/// speed of serial connection (default speed is 9600,
 /// ignored for non-serial connection).
 pub struct CMPDLP<'a> {
     padp_handler: &'a dyn CMPDLPTransferTrait,
@@ -84,7 +128,7 @@ pub struct CMPDLP<'a> {
 }
 
 /// CMP Packet
-/// 
+///
 /// Define CMP Packet, includes packet type, flags, version and baud rate
 #[derive(Serialize, Deserialize)]
 pub struct CMPPacket {
@@ -96,7 +140,10 @@ pub struct CMPPacket {
 }
 
 impl<'a> CMPDLP<'a> {
-    /// Start a connection
+    /// Attempt to listen for a connection to the remote CMP/DLP enabled device.
+    ///
+    /// This method will block until a connection is initiated,
+    /// so it's safe to call and wait until a connection occurs.
     pub fn connect(&mut self) {
         if self.padp_handler.is_connected() {
             &self.connect();
@@ -110,16 +157,18 @@ impl<'a> CMPDLP<'a> {
         self.connected = true;
     }
 
-    /// Disconnect without reason
+    /// A method to cause the protocol stack issue a disconnect request.
     pub fn disconnect(&self) {
         self.disconnect_with_reason('\0');
     }
 
-    /// Disconnect with reason
+    /// A method to cause the protocol stack issue a disconnect request
+    /// with the specified disconnect reason code.
     pub fn disconnect_with_reason(&self, reason: char) {
         // TODO: Implement
     }
 
+    /// Connection function for PADP
     fn padp_connect(&self) {
         let mut flags: u8 = 0;
         let mut pkt: GenericPacket;
@@ -149,12 +198,13 @@ impl<'a> CMPDLP<'a> {
         }
 
         self.padp_handler.transmit_packet(
-            new_cmp_packet_with_setting(CMP_INIT, flags, 0, 0, self.speed).packet_to_bytes(),
+            new_cmp_packet_with_settings(CMP_INIT, flags, 0, 0, self.speed).packet_to_bytes(),
             3,
             3,
         )
     }
 
+    /// USB Receive Handshake.
     fn usb_rx_handshake(&self) {
         let mut pkt: GenericPacket;
         // TODO: USB RX Handshake
@@ -162,12 +212,27 @@ impl<'a> CMPDLP<'a> {
 }
 
 impl CMPPacket {
+    /// Test if flag is set
     pub fn test_flag(&self, flag: u8) -> bool {
         (self.flags & flag) == flag
     }
 }
 
 impl CMPPacketTrait for CMPPacket {
+    /// Packet to Bytes
+    ///
+    /// # Bytes Definition
+    ///
+    /// * 0: Packet Type
+    /// * 1: Flags
+    /// * 2: Major Version
+    /// * 3: Minor Version
+    /// * 4-5: 0 (Padding)
+    /// * 6-9: Baud Rate
+    ///
+    /// # Return
+    ///
+    /// An array of bytes containing the byte representation of this packet object.
     fn packet_to_bytes(&self) -> Vec<u8> {
         let mut data: Vec<u8> = vec![0; 10];
         data[0] = self.packet_type;
@@ -185,6 +250,24 @@ impl CMPPacketTrait for CMPPacket {
         data
     }
 
+    /// Bytes to Packet
+    ///
+    /// # Byte Definition
+    ///
+    /// * 0: Packet Type
+    /// * 1: Flags
+    /// * 2: Major Version
+    /// * 3: Minor Version
+    /// * 4-5: 0 (Padding)
+    /// * 6-9: Baud Rate
+    ///
+    /// # Parameters
+    ///
+    /// * `pkt`: The byte array containing a CMP packet to convert.
+    ///
+    /// # Return
+    ///
+    /// The `CMPPacket` object containing the data from the byte array.
     fn bytes_to_packet(pkt: &Vec<u8>) -> CMPPacket {
         let mut cmp_pkt = new_cmp_packet();
         cmp_pkt.packet_type = pkt[0];
@@ -197,14 +280,29 @@ impl CMPPacketTrait for CMPPacket {
     }
 }
 
+/// Construct an instance of the `CMPDLP` class using
+/// the specified underlying `CMPDLPTransferTrait` protocol handler.
+///
+/// # Parameters
+///
+/// * `padp`: The `CMPDLPTransferTrait` protocol handler to use for I/O
+///
+/// # Return
+///
+/// A `CMPDLP` instance
 pub fn new_cmp_dlp<'a>(padp: &'a dyn CMPDLPTransferTrait) -> CMPDLP {
     CMPDLP {
         padp_handler: padp,
         connected: false,
-        speed: 9600,
+        speed: DEFAULT_SPEED,
     }
 }
 
+/// Construct an instance of the `CMPPacket` class
+///
+/// # Return
+///
+/// A `CMPPacket` instance
 pub fn new_cmp_packet() -> CMPPacket {
     CMPPacket {
         packet_type: 0,
@@ -215,7 +313,20 @@ pub fn new_cmp_packet() -> CMPPacket {
     }
 }
 
-pub fn new_cmp_packet_with_setting(
+/// Construct an instance of the `CMPPacket` class with settings
+///
+/// # Parameters
+///
+/// * `pkt_type`: The CMP packets type.
+/// * `flags`: The flags to attach to this packet.
+/// * `major_version`: The major protocol version.
+/// * `minor_version`: The minor protocol version.
+/// * `baud`: The serial rate to use for serial synchronization.
+///
+/// # Return
+///
+/// A `CMPPacket` instance with settings
+pub fn new_cmp_packet_with_settings(
     packet_type: u8,
     flags: u8,
     major_version: u8,
@@ -231,6 +342,15 @@ pub fn new_cmp_packet_with_setting(
     }
 }
 
+/// A method to determine the type of incoming packet.
+///
+/// # Parameters
+/// * `generic_packet`: A `GenericPacket` to be determined.
+///
+/// # Return
+///
+/// * True if this packet is a PADP packet.
+/// * False otherwise.
 fn determine_packet_type(generic_packet: &GenericPacket) -> bool {
     generic_packet.data[0] >= 16
 }
