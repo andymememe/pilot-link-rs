@@ -6,3 +6,4 @@ pub mod packet_timer;
 pub mod cmp_dlp;
 pub mod padp;
 pub mod slp;
+pub mod usb;

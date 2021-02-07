@@ -32,24 +32,6 @@ pub const CMP_ABORT: u8 = 3;
 /// CMP Packet Type: Extended
 pub const CMP_EXTENDED: u8 = 4;
 
-// Flag for CMP Packet
-/// CMP Packet Flag: Change Baud Rate
-pub const FLAG_CHANGE_BAUD_RATE: u8 = 0x80;
-/// CMP Packet Flag: 1 Min. Timeout
-pub const FLAG_ONE_MINUTE_TIMEOUT: u8 = 0x40;
-/// CMP Packet Flag: 2 Min. Timeout
-pub const FLAG_TWO_MINUTE_TIMEOUT: u8 = 0x20;
-/// CMP Packet Flag: Long Packet Support
-pub const FLAG_LONG_PACKET_SUPPORT: u8 = 0x10;
-
-// Other Constants
-/// Transaction ID for CMP Wake Up Packet
-pub const WAKEUP_TID: i8 = -1;
-/// Version mismatched on either end of the synchronization
-pub const VERSION_MISMATCH: u8 = 0x80;
-/// Default speed for Serial connection
-pub const DEFAULT_SPEED: u32 = 9600;
-
 /// CMP / DLP Packet I/O Trait
 ///
 /// Defines functions of connection and transfering with CMP / DLP
@@ -137,6 +119,21 @@ pub struct CMPPacket {
     pub major_version: u8,
     pub minor_version: u8,
     pub baud_rate: u32,
+}
+
+/// DLP Version
+/// 
+/// A class for handling DLP's Version information block format.
+/// 
+/// This class holds version information, and can convert to and from 
+/// DLP version information and Java primitive types.
+/// 
+/// The Palm uses a four byte format for storing version information in a
+/// `major_version.minor_version` format.
+#[derive(Serialize, Deserialize)]
+pub struct DLPVersion {
+    pub major_version: u8,
+    pub minor_version: u8,
 }
 
 impl<'a> CMPDLP<'a> {
@@ -253,11 +250,11 @@ impl<'a> CMPDLP<'a> {
         }
 
         if self.speed != 9600 {
-            flags = FLAG_CHANGE_BAUD_RATE;
+            flags = CMPPacket::FLAG_CHANGE_BAUD_RATE;
         }
 
-        if cmp_pkt.test_flag(FLAG_LONG_PACKET_SUPPORT) {
-            flags |= FLAG_LONG_PACKET_SUPPORT;
+        if cmp_pkt.test_flag(CMPPacket::FLAG_LONG_PACKET_SUPPORT) {
+            flags |= CMPPacket::FLAG_LONG_PACKET_SUPPORT;
             self.padp_handler.use_long_packets(true);
         } else {
             self.padp_handler.use_long_packets(false);
@@ -278,6 +275,24 @@ impl<'a> CMPDLP<'a> {
 }
 
 impl CMPPacket {
+    // Flag for CMP Packet
+    /// CMP Packet Flag: Change Baud Rate
+    pub const FLAG_CHANGE_BAUD_RATE: u8 = 0x80;
+    /// CMP Packet Flag: 1 Min. Timeout
+    pub const FLAG_ONE_MINUTE_TIMEOUT: u8 = 0x40;
+    /// CMP Packet Flag: 2 Min. Timeout
+    pub const FLAG_TWO_MINUTE_TIMEOUT: u8 = 0x20;
+    /// CMP Packet Flag: Long Packet Support
+    pub const FLAG_LONG_PACKET_SUPPORT: u8 = 0x10;
+    
+    // Other Constants
+    /// Transaction ID for CMP Wake Up Packet
+    pub const WAKEUP_TID: i8 = -1;
+    /// Version mismatched on either end of the synchronization
+    pub const VERSION_MISMATCH: u8 = 0x80;
+    /// Default speed for Serial connection
+    pub const DEFAULT_SPEED: u32 = 9600;
+
     /// Test if flag is set
     pub fn test_flag(&self, flag: u8) -> bool {
         (self.flags & flag) == flag
@@ -360,7 +375,7 @@ pub fn new_cmp_dlp<'a>(padp: &'a dyn CMPDLPTransferTrait) -> CMPDLP {
     CMPDLP {
         padp_handler: padp,
         connected: false,
-        speed: DEFAULT_SPEED,
+        speed: CMPPacket::DEFAULT_SPEED,
     }
 }
 
@@ -375,7 +390,7 @@ pub fn new_cmp_packet() -> CMPPacket {
         flags: 0,
         major_version: 0,
         minor_version: 0,
-        baud_rate: DEFAULT_SPEED,
+        baud_rate: CMPPacket::DEFAULT_SPEED,
     }
 }
 
@@ -405,6 +420,39 @@ pub fn new_cmp_packet_with_settings(
         major_version: major_version,
         minor_version: minor_version,
         baud_rate: baud,
+    }
+}
+
+/// Construct an instance of the `DLPVersion` class as version 1.0.
+///
+/// # Parameters
+///
+/// * `pkt_type`: The CMP packets type.
+/// * `flags`: The flags to attach to this packet.
+/// * `major_version`: The major protocol version.
+/// * `minor_version`: The minor protocol version.
+/// * `baud`: The serial rate to use for serial synchronization.
+///
+/// # Return
+///
+/// A `DLPVersion` instance
+pub fn new_dlp_version() -> DLPVersion {
+    DLPVersion {
+        major_version: 1,
+        minor_version: 0
+    }
+}
+
+
+/// Construct a new DLPVersion object using the specified version information.
+///
+/// # Return
+///
+/// A `DLPVersion` instance with specified version
+pub fn new_dlp_version_with_settings(major_version: u8, minor_version: u8) -> DLPVersion {
+    DLPVersion {
+        major_version: major_version,
+        minor_version: minor_version
     }
 }
 
