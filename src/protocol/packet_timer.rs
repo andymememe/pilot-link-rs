@@ -1,3 +1,3 @@
-pub trait PacketTimer {
-    fn timer_expires(&self, packet_timer: dyn PacketTimer);
+pub trait PacketTimerTrait {
+    fn timer_expires(&self, packet_timer: dyn PacketTimerTrait);
 }

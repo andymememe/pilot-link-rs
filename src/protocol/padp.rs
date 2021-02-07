@@ -1,4 +1,4 @@
-use super::packet_timer::PacketTimer;
+use super::packet_timer::PacketTimerTrait;
 use super::slp::SLP;
 
 pub const DEFAULT_QUEUE_LENGTH: i32 = 4;
@@ -12,9 +12,9 @@ pub const STATE_CONNECTED: i32 = 2;
 // TODO: Add Thread
 pub struct PADP<'a> {
     slp_handler: SLP,
-    ack_timer: &'a dyn PacketTimer,
-    inter_packet_timer: &'a dyn PacketTimer,
-    tickle_timer: &'a dyn PacketTimer,
+    ack_timer: &'a dyn PacketTimerTrait,
+    inter_packet_timer: &'a dyn PacketTimerTrait,
+    tickle_timer: &'a dyn PacketTimerTrait,
     connect_state: i32,
     trans_id: i8,
     retries: i32,

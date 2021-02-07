@@ -1,3 +1,5 @@
+//! Hotsync-related Protocols
+
 pub mod hotsync;
 pub mod generic_packet;
 pub mod packet_timer;
