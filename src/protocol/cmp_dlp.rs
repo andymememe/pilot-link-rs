@@ -120,7 +120,6 @@ impl<'a> CMPDLP<'a> {
         // TODO: Implement
     }
 
-    /// PADP connection
     fn padp_connect(&self) {
         let mut flags: u8 = 0;
         let mut pkt: GenericPacket;
@@ -156,7 +155,6 @@ impl<'a> CMPDLP<'a> {
         )
     }
 
-    /// USB Receive Handshake
     fn usb_rx_handshake(&self) {
         let mut pkt: GenericPacket;
         // TODO: USB RX Handshake
