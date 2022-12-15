@@ -50,7 +50,7 @@ struct SLPData {
 pub fn slp_new() -> Protocol {
     Protocol {
         level: OptLevel::LevelSLP,
-        data: Box::new(&SLPData{
+        data: Some(Box::new(&SLPData{
             destination: SLP_SOCK_DLP,
             last_destination: -1,
             source: SLP_SOCK_DLP,
@@ -59,7 +59,7 @@ pub fn slp_new() -> Protocol {
             last_slp_type: -1,
             tx_id: 0xfe,
             last_tx_id: 0xff,
-        }),
+        })),
         dup: slp_dup,
         read: slp_rx,
         write: slp_tx,
@@ -70,25 +70,23 @@ pub fn slp_new() -> Protocol {
 }
 
 pub fn slp_dup(ps: &'static Protocol) -> Protocol {
-    let data: &SLPData;
-    let new_data: SLPData;
-
-    data = ps.data.downcast_ref::<SLPData>().expect("need to be a SLPData");
-
-    new_data = SLPData {
-        destination: data.destination,
-        last_destination: data.last_destination,
-        source: data.source,
-        last_source: data.last_source,
-        slp_type: data.slp_type,
-        last_slp_type: data.last_slp_type,
-        tx_id: data.tx_id,
-        last_tx_id: data.last_tx_id,
-    };
+    let data: &SLPData = &ps.data
+        .as_ref()
+        .map(|val| val.downcast_ref().expect(""))
+        .unwrap_or_else(|| &SLPData{
+            destination: SLP_SOCK_DLP,
+            last_destination: -1,
+            source: SLP_SOCK_DLP,
+            last_source: -1,
+            slp_type: SLP_TYPE_PADP,
+            last_slp_type: -1,
+            tx_id: 0xfe,
+            last_tx_id: 0xff,
+        });
 
     Protocol {
         level: ps.level,
-        data: Box::new(new_data),
+        data: Some(Box::new(data)),
         dup: ps.dup,
         read: ps.read,
         write: ps.write,

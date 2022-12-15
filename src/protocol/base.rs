@@ -6,7 +6,7 @@ use super::socket::{Socket, OptLevel};
 
 pub struct Protocol {
     pub level: OptLevel,
-    pub data: Box<dyn Any>,
+    pub data: Option<Box<&'static (dyn Any + Sync + Send)>>,
     pub dup: fn(&'static Protocol) -> Protocol,
     pub read: fn(&Socket, &Vec<u8>, usize, i32) -> isize,
     pub write: fn(&Socket, &Vec<u8>, usize, i32) -> isize,
